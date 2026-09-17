@@ -7,6 +7,7 @@ Sanitized record of every exchange with the real SATIM certification environment
 | 2026-09-17 | 0.1.0-alpha.0 (uncommitted) | Register 50.00 DZD, language FR, POST form-encoded, `test2.satim.dz` | `register.do` | HTTP 200, `{"errorCode":5,"errorMessage":"Access denied"}` | `errorCode 0` with `orderId`/`formUrl` | Blocked by account access |
 | 2026-09-17 | curl probe | Same fields via GET query string, `test2.satim.dz` | `register.do` | HTTP 200, `{"errorCode":5,"errorMessage":"Access denied"}` | same | Blocked by account access |
 | 2026-09-17 | curl probe | Same fields via GET, `test.satim.dz` | `register.do` | HTTP 200, `{"errorCode":5,"errorMessage":"Access denied"}` | same | Blocked by account access |
+| 2026-09-17 | 4fc94e3 | Reference merchant in certification mode: checkout 806.50 DZD via the shop UI, POST to `test2.satim.dz` | `register.do` | HTTP 200, `{"errorCode":5,"errorMessage":"Access denied"}` | `orderId`/`formUrl`, redirect to hosted page | Blocked by account access; shop showed the failure page, order persisted as `failed`, no credentials leaked |
 
 ## Findings
 
