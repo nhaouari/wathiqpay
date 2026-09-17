@@ -1,6 +1,8 @@
 # Reference merchant
 
-A framework-free Node.js shop that demonstrates the WathiqPay module end to end for certification: checkout, order registration, redirect to the hosted page, return handling, server-to-server acknowledgement, exactly-once fulfilment, and receipts.
+A framework-free Node.js shop that demonstrates the WathiqPay module end to end for certification: a six-product catalog, a cart, a checkout with order summary, order registration, redirect to the hosted page, return handling, server-to-server acknowledgement, exactly-once fulfilment, an order history, and receipts.
+
+Pages: `/` catalog · `/cart` · `/checkout` · `/orders` and `/orders/<ref>` (per browser session) · `/payment/return` and `/payment/fail` · `/orders/<ref>/receipt[.pdf]`.
 
 ```text
 npm run demo             # simulator mode: starts a local SATIM simulator and the shop on http://localhost:3000
@@ -19,7 +21,7 @@ Certification mode reads `SATIM_USERNAME`, `SATIM_PASSWORD`, and `SATIM_TERMINAL
 | Terms of sale and online-payment terms shown and explicitly accepted | `.terms` block with required checkbox; server rejects without it |
 | Language consistent across checkout, SATIM request, result, receipts, errors | Cookie-selected FR/AR/EN; stored on the order; sent to `register.do` and `acknowledgeTransaction.do`; result page uses the order's language |
 | Hosted page opens as an independent page | `303` redirect to `formUrl`; no iframe or WebView |
-| Order persisted before registration; `orderNumber` unique and 10 chars | `store.ts` `createPending` (SQLite primary key, 32-symbol alphabet) |
+| Order persisted before registration; `orderNumber` unique and 10 chars | `store.ts` `createPending` writes the order and its items in one transaction (SQLite primary key, 32-symbol alphabet) |
 | SATIM `orderId` stored before redirect; redirect only to returned `formUrl` | `app.ts` `POST /checkout` |
 | Browser redirect untrusted; acknowledgement from the backend using the stored `orderId` | `app.ts` `settle()`; query-string `orderId` only cross-checked, mismatches get 404 |
 | Amount and order number compared before fulfilment | `paymentMatchesOrder`; mismatches go to state `review` |
@@ -37,6 +39,8 @@ Certification mode reads `SATIM_USERNAME`, `SATIM_PASSWORD`, and `SATIM_TERMINAL
 - The PDF uses standard Latin fonts; Arabic receipts fall back to French labels in the PDF. Embed a font for production.
 - The mailer writes `.eml` files to `outbox/`. Replace with SMTP in production.
 - `/admin/*` endpoints are unauthenticated demo tooling.
+- Sessions are an anonymous `sid` cookie; there is no customer login. Order pages are visible only to the session that placed them.
+- Product images are inline SVG placeholders so the demo ships no binary assets.
 - The store is SQLite via `node:sqlite` (flag `--experimental-sqlite` on Node 22). Any database with a unique constraint and a conditional update works the same way.
 
 ## Tests

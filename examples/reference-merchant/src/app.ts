@@ -1,20 +1,20 @@
 /**
  * Reference merchant HTTP application. Framework-free so the flow is
- * readable end to end: checkout -> register -> redirect -> return ->
- * acknowledge -> compare -> fulfil once -> receipt.
+ * readable end to end: catalog -> cart -> checkout -> register -> redirect
+ * -> return -> acknowledge -> compare -> fulfil once -> receipt.
  */
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { once } from "node:events";
+import { randomBytes } from "node:crypto";
 import { createClient, classifyPayment, paymentMatchesOrder, fromMinorUnits, isWathiqPayError, redact, type AcknowledgeResult, type WathiqPayClient } from "../../../src/index.js";
 import type { MerchantConfig } from "./config.js";
 import { OrderStore, type OrderRow, type OrderState } from "./store.js";
 import { messages, normalizeLang, formatAmount, type Lang } from "./i18n.js";
+import { findProduct } from "./catalog.js";
 import { createChallenge, verify } from "./captcha.js";
 import { buildReceiptPdf } from "./receipt-pdf.js";
 import { createOutboxMailer, isPlausibleEmail, type Mailer } from "./mailer.js";
-import { checkoutPage, successPage, failurePage, receiptPage, receiptRows, notFoundPage, layout, esc } from "./views.js";
-
-const UNIT_PRICE_MINOR = "80650"; // 806.50 DZD, the portal's own example amount
+import { catalogPage, cartPage, checkoutPage, ordersPage, orderDetailPage, successPage, failurePage, receiptPage, receiptRows, notFoundPage, layout, esc, priceCart, type Ctx } from "./views.js";
 
 export interface MerchantApp {
   server: Server;
@@ -80,21 +80,21 @@ export function createApp(config: MerchantConfig, deps: { mailer?: Mailer; store
     return { order: store.get(order.orderNumber)!, ack };
   }
 
-  function renderOutcome(lang: Lang, order: OrderRow, ack: AcknowledgeResult | undefined): string {
+  function renderOutcome(ctx: Ctx, order: OrderRow, ack: AcknowledgeResult | undefined): string {
     switch (order.state) {
       case "paid":
-        return successPage(lang, { order, ack: ack! });
+        return successPage(ctx, { order, ack: ack! }, store.items(order.orderNumber));
       case "declined":
-        return failurePage(lang, order, ack, "declined");
+        return failurePage(ctx, order, ack, "declined");
       case "reversed":
       case "refunded":
-        return failurePage(lang, order, ack, "reversed");
+        return failurePage(ctx, order, ack, "reversed");
       case "review":
-        return failurePage(lang, order, ack, "review");
+        return failurePage(ctx, order, ack, "review");
       case "failed":
-        return failurePage(lang, order, ack, "failed");
+        return failurePage(ctx, order, ack, "failed");
       default:
-        return failurePage(lang, order, ack, "pending");
+        return failurePage(ctx, order, ack, "pending");
     }
   }
 
@@ -103,12 +103,20 @@ export function createApp(config: MerchantConfig, deps: { mailer?: Mailer; store
     const cookies = parseCookies(req.headers.cookie);
     const lang = normalizeLang(cookies["lang"]);
     const t = messages[lang];
+    const setCookies: string[] = [];
+    let sid = cookies["sid"] && /^[a-f0-9]{32}$/.test(cookies["sid"]) ? cookies["sid"] : undefined;
+    if (!sid) {
+      sid = randomBytes(16).toString("hex");
+      setCookies.push(`sid=${sid}; Path=/; HttpOnly; SameSite=Lax`);
+    }
+    const session = sid;
+    const ctx = (): Ctx => ({ lang, cartCount: store.getCart(session).reduce((n, l) => n + l.quantity, 0), current: url.pathname + url.search });
     const html = (status: number, body: string, extra: Record<string, string> = {}) => {
-      res.writeHead(status, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", ...extra });
+      res.writeHead(status, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "set-cookie": setCookies, ...extra });
       res.end(body);
     };
-    const redirect = (to: string, extra: Record<string, string> = {}) => {
-      res.writeHead(303, { location: to, ...extra });
+    const redirect = (to: string) => {
+      res.writeHead(303, { location: to, "set-cookie": setCookies });
       res.end();
     };
     const method = req.method ?? "GET";
@@ -118,27 +126,54 @@ export function createApp(config: MerchantConfig, deps: { mailer?: Mailer; store
     let m = /^\/lang\/(\w+)$/.exec(path);
     if (m) {
       const next = url.searchParams.get("next") ?? "/";
-      return redirect(next.startsWith("/") ? next : "/", { "set-cookie": `lang=${normalizeLang(m[1])}; Path=/; SameSite=Lax` });
+      setCookies.push(`lang=${normalizeLang(m[1])}; Path=/; SameSite=Lax`);
+      return redirect(next.startsWith("/") ? next : "/");
     }
 
-    if (path === "/" && method === "GET") {
-      const qty = clampQty(url.searchParams.get("quantity"));
-      const c = createChallenge(config.captchaSecret);
-      return html(200, checkoutPage(lang, { unitMinor: UNIT_PRICE_MINOR, quantity: qty, totalMinor: total(qty), captchaQuestion: c.question, captchaToken: c.token }));
+    // ---- catalog and cart ------------------------------------------------
+    if (path === "/" && method === "GET") return html(200, catalogPage(ctx(), url.searchParams.has("added") ? t.addedToCart : undefined));
+
+    if (path === "/cart/add" && method === "POST") {
+      const form = await readForm(req);
+      const product = findProduct(form.get("product") ?? "");
+      if (!product) return html(404, notFoundPage(ctx()));
+      store.addToCart(session, product.id, clampQty(form.get("quantity")));
+      return redirect("/?added=1");
+    }
+    if (path === "/cart/update" && method === "POST") {
+      const form = await readForm(req);
+      const product = findProduct(form.get("product") ?? "");
+      if (product) store.setCartLine(session, product.id, clampQty(form.get("quantity"), 0));
+      return redirect("/cart");
+    }
+    if (path === "/cart" && method === "GET") return html(200, cartPage(ctx(), priceCart(store.getCart(session))));
+
+    // ---- checkout ---------------------------------------------------------
+    if (path === "/checkout" && method === "GET") {
+      const cart = priceCart(store.getCart(session));
+      if (cart.lines.length === 0) return redirect("/cart");
+      return html(200, checkoutPage(ctx(), cart, createChallenge(config.captchaSecret)));
     }
 
     if (path === "/checkout" && method === "POST") {
       const form = await readForm(req);
-      const qty = clampQty(form.get("quantity"));
-      const rerender = (error: string) => {
-        const c = createChallenge(config.captchaSecret);
-        return html(400, checkoutPage(lang, { unitMinor: UNIT_PRICE_MINOR, quantity: qty, totalMinor: total(qty), captchaQuestion: c.question, captchaToken: c.token, error }));
-      };
+      const cart = priceCart(store.getCart(session));
+      if (cart.lines.length === 0) return redirect("/cart");
+      const email = (form.get("email") ?? "").trim();
+      const rerender = (error: string) => html(400, checkoutPage(ctx(), cart, createChallenge(config.captchaSecret), { error, email }));
       if (form.get("terms") !== "yes") return rerender(t.termsRequired);
       if (!verify(config.captchaSecret, form.get("captchaToken") ?? undefined, form.get("captcha") ?? undefined)) return rerender(t.captchaFailed);
+      if (email && !isPlausibleEmail(email)) return rerender(t.emailAddress);
 
       // 1. Persist first. 2. Register. 3. Store orderId. 4. Redirect to formUrl only.
-      const order = store.createPending({ amountMinor: total(qty), description: `${t.product} x${qty}`, language: lang });
+      const order = store.createPending({
+        amountMinor: cart.totalMinor,
+        description: cart.lines.map((l) => `${l.product.name[lang]} x${l.quantity}`).join(", ").slice(0, 512),
+        language: lang,
+        sessionId: session,
+        customerEmail: email || null,
+        items: cart.lines.map((l) => ({ productId: l.product.id, name: l.product.name[lang], unitMinor: l.product.priceMinor, quantity: l.quantity })),
+      });
       try {
         const reg = await client.registerOrder({
           orderNumber: order.orderNumber,
@@ -150,37 +185,50 @@ export function createApp(config: MerchantConfig, deps: { mailer?: Mailer; store
           metadata: { udf1: order.orderNumber },
         });
         store.markRegistered(order.orderNumber, reg.orderId);
+        store.clearCart(session);
         return redirect(reg.formUrl);
       } catch (e) {
         const note = isWathiqPayError(e) ? `${e.name} (${e.outcome}): ${e.message}` : "unexpected error";
         log.push(`register failed for ${order.orderNumber}: ${note}`);
         store.markFailed(order.orderNumber, note);
-        return html(502, failurePage(lang, store.get(order.orderNumber)!, undefined, "failed"));
+        return html(502, failurePage(ctx(), store.get(order.orderNumber)!, undefined, "failed"));
       }
     }
 
+    // ---- return from SATIM ------------------------------------------------
     // Both return routes are handled identically: the query string is only a
     // lookup key, never a payment claim. SATIM's appended orderId is cross-checked.
     if ((path === "/payment/return" || path === "/payment/fail") && method === "GET") {
       const ref = url.searchParams.get("ref") ?? "";
       const order = store.get(ref);
-      if (!order) return html(404, notFoundPage(lang));
+      if (!order) return html(404, notFoundPage(ctx()));
       const claimed = url.searchParams.get("orderId");
       if (claimed && order.satimOrderId && claimed !== order.satimOrderId) {
         log.push(`orderId mismatch on return for ${ref}`);
-        return html(404, notFoundPage(lang));
+        return html(404, notFoundPage(ctx()));
       }
       const settled = await settle(order);
-      const pageLang = settled.order.language; // language consistency with the checkout that started it
-      return html(200, renderOutcome(pageLang, settled.order, settled.ack));
+      // Language consistency with the checkout that started it, even without the cookie.
+      return html(200, renderOutcome({ ...ctx(), lang: settled.order.language }, settled.order, settled.ack));
+    }
+
+    // ---- orders, receipts -------------------------------------------------
+    if (path === "/orders" && method === "GET") return html(200, ordersPage(ctx(), store.ordersForSession(session)));
+
+    m = /^\/orders\/([A-Z0-9]{1,10})$/.exec(path);
+    if (m && method === "GET") {
+      const order = store.get(m[1]!);
+      if (!order || order.sessionId !== session) return html(404, notFoundPage(ctx()));
+      const ack = order.ackJson ? (JSON.parse(order.ackJson) as AcknowledgeResult) : undefined;
+      return html(200, orderDetailPage(ctx(), order, store.items(order.orderNumber), ack));
     }
 
     m = /^\/orders\/([A-Z0-9]{1,10})\/receipt(\.pdf)?$/.exec(path);
     if (m && method === "GET") {
       const order = store.get(m[1]!);
-      if (!order || order.state !== "paid" || !order.ackJson) return html(404, notFoundPage(lang));
+      if (!order || order.state !== "paid" || !order.ackJson) return html(404, notFoundPage(ctx()));
       const data = { order, ack: JSON.parse(order.ackJson) as AcknowledgeResult };
-      if (!m[2]) return html(200, receiptPage(order.language, data));
+      if (!m[2]) return html(200, receiptPage({ ...ctx(), lang: order.language }, data));
       const pdf = renderPdf(order.language, data);
       res.writeHead(200, { "content-type": "application/pdf", "content-disposition": `attachment; filename="receipt-${order.orderNumber}.pdf"`, "cache-control": "no-store" });
       res.end(pdf);
@@ -190,29 +238,29 @@ export function createApp(config: MerchantConfig, deps: { mailer?: Mailer; store
     m = /^\/orders\/([A-Z0-9]{1,10})\/receipt\/email$/.exec(path);
     if (m && method === "POST") {
       const order = store.get(m[1]!);
-      if (!order || order.state !== "paid" || !order.ackJson) return html(404, notFoundPage(lang));
+      if (!order || order.state !== "paid" || !order.ackJson) return html(404, notFoundPage(ctx()));
       const form = await readForm(req);
       const email = (form.get("email") ?? "").trim();
       const data = { order, ack: JSON.parse(order.ackJson) as AcknowledgeResult };
-      if (!isPlausibleEmail(email)) return html(400, successPage(order.language, data));
-      const pdf = renderPdf(order.language, data);
+      const pageCtx = { ...ctx(), lang: order.language };
+      if (!isPlausibleEmail(email)) return html(400, successPage(pageCtx, data, store.items(order.orderNumber)));
       const t2 = messages[order.language];
       await mailer.send({
         to: email,
         subject: `${t2.receipt} ${order.orderNumber}`,
         text: receiptRows(order.language, data).map(([k, v]) => `${k}: ${v}`).join("\n") + `\n${t2.support}\n`,
-        pdf,
+        pdf: renderPdf(order.language, data),
         pdfName: `receipt-${order.orderNumber}.pdf`,
       });
-      return html(200, successPage(order.language, data, email));
+      return html(200, successPage(pageCtx, data, store.items(order.orderNumber), email));
     }
 
-    // Operational endpoints (demo only; protect them in a real deployment).
+    // ---- operational endpoints (demo only; protect them in a real deployment)
     m = /^\/admin\/orders\/([A-Z0-9]{1,10})$/.exec(path);
     if (m && method === "GET") {
       const order = store.get(m[1]!);
       if (!order) return json(res, 404, { error: "not found" });
-      return json(res, 200, { ...redact(order), fulfilments: store.fulfilmentCount(order.orderNumber) });
+      return json(res, 200, { ...redact(order), items: store.items(order.orderNumber), fulfilments: store.fulfilmentCount(order.orderNumber) });
     }
     if (path === "/admin/reconcile" && method === "POST") {
       const olderThan = Number(url.searchParams.get("olderThan") ?? config.reconcileAfterSeconds);
@@ -220,7 +268,7 @@ export function createApp(config: MerchantConfig, deps: { mailer?: Mailer; store
     }
     if (path === "/healthz") return json(res, 200, { ok: true, mode: config.mode });
 
-    return html(404, layout(lang, "404", `<h1>404</h1><p>${esc(t.notFound)}</p>`));
+    return html(404, layout(ctx(), "404", `<h1>404</h1><p>${esc(t.notFound)}</p>`));
   }
 
   async function reconcile(olderThanSeconds = config.reconcileAfterSeconds) {
@@ -236,9 +284,10 @@ export function createApp(config: MerchantConfig, deps: { mailer?: Mailer; store
     // Standard PDF fonts cannot render Arabic; fall back to French labels for AR.
     const pdfLang: Lang = lang === "AR" ? "FR" : lang;
     const t = messages[pdfLang];
+    const items = store.items(data.order.orderNumber).map((it) => ({ label: `${it.quantity} ×`, value: `${it.name}  ${formatAmount((BigInt(it.unitMinor) * BigInt(it.quantity)).toString(), pdfLang)}` }));
     return buildReceiptPdf(
       t.receipt,
-      receiptRows(pdfLang, data).map(([label, value]) => ({ label, value })),
+      [...receiptRows(pdfLang, data).map(([label, value]) => ({ label, value })), ...items],
       [t.support, `${t.total}: ${formatAmount(data.ack.amountMinor ?? data.order.amountMinor, pdfLang)}`],
     );
   }
@@ -271,13 +320,9 @@ export function createApp(config: MerchantConfig, deps: { mailer?: Mailer; store
   };
 }
 
-function total(qty: number): string {
-  return (BigInt(UNIT_PRICE_MINOR) * BigInt(qty)).toString();
-}
-
-function clampQty(v: string | null | undefined): number {
+function clampQty(v: string | null | undefined, min = 1): number {
   const n = Number.parseInt(v ?? "1", 10);
-  return Number.isFinite(n) && n >= 1 && n <= 99 ? n : 1;
+  return Number.isFinite(n) && n >= min && n <= 99 ? n : min;
 }
 
 async function readForm(req: IncomingMessage): Promise<URLSearchParams> {

@@ -82,13 +82,16 @@ describe("reference merchant journey against the simulator", () => {
     await sim.stop();
   });
 
-  /** Drive checkout up to the hosted page; returns the merchant ref and hosted URL. */
-  async function checkout(b: Browser, opts: { captcha?: string; terms?: string; quantity?: string } = {}): Promise<Page> {
-    const page = await b.go(`${origin}/`);
+  /** Add items to the cart and submit the checkout; returns the hosted page (or the error page). */
+  async function checkout(b: Browser, opts: { captcha?: string; terms?: string; items?: Array<[string, string]>; email?: string } = {}): Promise<Page> {
+    for (const [product, quantity] of opts.items ?? [["dates", "1"]]) {
+      await b.go(`${origin}/cart/add`, { method: "POST", form: { product, quantity } });
+    }
+    const page = await b.go(`${origin}/checkout`);
     const c = captchaFrom(page.body);
     return b.go(`${origin}/checkout`, {
       method: "POST",
-      form: { quantity: opts.quantity ?? "1", terms: opts.terms ?? "yes", captcha: opts.captcha ?? c.answer, captchaToken: c.token },
+      form: { terms: opts.terms ?? "yes", captcha: opts.captcha ?? c.answer, captchaToken: c.token, email: opts.email ?? "" },
     });
   }
 
@@ -98,14 +101,27 @@ describe("reference merchant journey against the simulator", () => {
     return { orderId, ref };
   }
 
-  test("checkout page shows amount, terms, CAPTCHA, and the CIB/Edahabia payment button", async () => {
+  test("catalog, cart, and checkout: totals are exact and the checkout shows terms, CAPTCHA, and the CIB/Edahabia button", async () => {
     const b = new Browser();
-    const page = await b.go(`${origin}/?quantity=2`);
-    assert.match(page.body, /1 613,00 DZD/);
+    const catalog = await b.go(`${origin}/`);
+    assert.match(catalog.body, /Dattes Deglet Nour/);
+    assert.match(catalog.body, /1 200,00 DZD/);
+    await b.go(`${origin}/cart/add`, { method: "POST", form: { product: "dates", quantity: "2" } });
+    await b.go(`${origin}/cart/add`, { method: "POST", form: { product: "olive-oil", quantity: "1" } });
+    let cart = await b.go(`${origin}/cart`);
+    assert.match(cart.body, /4 200,00 DZD/); // 2 × 1200 + 1800
+    await b.go(`${origin}/cart/update`, { method: "POST", form: { product: "olive-oil", quantity: "0" } });
+    cart = await b.go(`${origin}/cart`);
+    assert.match(cart.body, /2 400,00 DZD/);
+    assert.doesNotMatch(cart.body, /Huile d'olive/);
+    const page = await b.go(`${origin}/checkout`);
+    assert.match(page.body, /id="total">2 400,00 DZD/);
     assert.match(page.body, /name="terms"/);
     assert.match(page.body, /name="captcha"/);
     assert.match(page.body, /CIB · Edahabia/);
     assert.match(page.body, /lang="fr"/);
+    const empty = await new Browser().go(`${origin}/checkout`);
+    assert.match(empty.body, /panier est vide/);
   });
 
   test("CAPTCHA and terms are enforced before any SATIM call", async () => {
@@ -121,7 +137,7 @@ describe("reference merchant journey against the simulator", () => {
 
   test("successful payment: register, redirect, return, acknowledge, fulfil once, receipts", async () => {
     const b = new Browser();
-    const hosted = await checkout(b, { quantity: "2" });
+    const hosted = await checkout(b, { items: [["dates", "2"], ["book", "1"]], email: "client@example.com" });
     assert.match(hosted.body, /Simulated SATIM page/);
     const { orderId, ref } = refFromHosted(hosted);
     assert.equal(ref.length, 10);
@@ -135,8 +151,17 @@ describe("reference merchant journey against the simulator", () => {
     assert.match(result.body, new RegExp(ref));
     assert.match(result.body, new RegExp(orderId));
     assert.match(result.body, /303030/); // approval code
-    assert.match(result.body, /1 613,00 DZD/);
+    assert.match(result.body, /4 900,00 DZD/); // 2 × 1200 + 2500
+    assert.match(result.body, /Dattes Deglet Nour 1 kg × 2/);
     assert.match(result.body, /Carte CIB \/ Edahabia/);
+    const cartAfter = await b.go(`${origin}/cart`);
+    assert.match(cartAfter.body, /panier est vide/, "cart is cleared after a successful registration");
+    const orders = await b.go(`${origin}/orders`);
+    assert.match(orders.body, new RegExp(`${ref}[\\s\\S]*Payée`));
+    const detail = await b.go(`${origin}/orders/${ref}`);
+    assert.match(detail.body, /receipt\.pdf/);
+    const foreign = await new Browser().go(`${origin}/orders/${ref}`);
+    assert.equal(foreign.status, 404, "another session cannot open the order");
     assert.match(result.body, /3020/);
     assert.match(result.body, /receipt\.pdf/);
 
@@ -261,9 +286,10 @@ describe("reference merchant journey against the simulator", () => {
     const o = await broken.start(0);
     try {
       const b = new Browser();
-      const page = await b.go(`${o}/`);
+      await b.go(`${o}/cart/add`, { method: "POST", form: { product: "dates", quantity: "1" } });
+      const page = await b.go(`${o}/checkout`);
       const c = captchaFrom(page.body);
-      const res = await b.go(`${o}/checkout`, { method: "POST", form: { quantity: "1", terms: "yes", captcha: c.answer, captchaToken: c.token } });
+      const res = await b.go(`${o}/checkout`, { method: "POST", form: { terms: "yes", captcha: c.answer, captchaToken: c.token } });
       assert.equal(res.status, 502);
       assert.match(res.body, /pas pu être enregistrée/);
       assert.doesNotMatch(res.body, /wrong/);
