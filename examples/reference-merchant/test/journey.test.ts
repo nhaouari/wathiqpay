@@ -105,6 +105,11 @@ describe("reference merchant journey against the simulator", () => {
     const b = new Browser();
     const catalog = await b.go(`${origin}/`);
     assert.match(catalog.body, /Dattes Deglet Nour/);
+    assert.match(catalog.body, /<img src="\/images\/dates\.jpg" alt="Dattes Deglet Nour 1 kg"/);
+    const img = await fetch(`${origin}/images/dates.jpg`);
+    assert.equal(img.status, 200);
+    assert.equal(img.headers.get("content-type"), "image/jpeg");
+    assert.equal((await fetch(`${origin}/images/../src/app.js`)).status, 404);
     assert.match(catalog.body, /1 200,00 DZD/);
     await b.go(`${origin}/cart/add`, { method: "POST", form: { product: "dates", quantity: "2" } });
     await b.go(`${origin}/cart/add`, { method: "POST", form: { product: "olive-oil", quantity: "1" } });
@@ -144,7 +149,7 @@ describe("reference merchant journey against the simulator", () => {
 
   test("successful payment: register, redirect, return, acknowledge, fulfil once, receipts", async () => {
     const b = new Browser();
-    const hosted = await checkout(b, { items: [["dates", "2"], ["book", "1"]], email: "client@example.com" });
+    const hosted = await checkout(b, { items: [["dates", "2"], ["honey", "1"]], email: "client@example.com" });
     assert.match(hosted.body, /Simulated SATIM page/);
     const { orderId, ref } = refFromHosted(hosted);
     assert.equal(ref.length, 10);
@@ -158,7 +163,7 @@ describe("reference merchant journey against the simulator", () => {
     assert.match(result.body, new RegExp(ref));
     assert.match(result.body, new RegExp(orderId));
     assert.match(result.body, /303030/); // approval code
-    assert.match(result.body, /4 900,00 DZD/); // 2 × 1200 + 2500
+    assert.match(result.body, /4 900,00 DZD/); // 2 × 1200 + 2500 (honey)
     assert.match(result.body, /Dattes Deglet Nour 1 kg × 2/);
     assert.match(result.body, /Carte CIB \/ Edahabia/);
     const cartAfter = await b.go(`${origin}/cart`);

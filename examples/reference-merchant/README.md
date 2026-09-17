@@ -40,7 +40,7 @@ Certification mode reads `SATIM_USERNAME`, `SATIM_PASSWORD`, and `SATIM_TERMINAL
 - The mailer writes `.eml` files to `outbox/`. Replace with SMTP in production.
 - `/admin/*` endpoints are unauthenticated demo tooling.
 - Sessions are an anonymous `sid` cookie; there is no customer login. Order pages are visible only to the session that placed them.
-- Product images are inline SVG placeholders so the demo ships no binary assets.
+- Product photos are openly licensed images from Wikimedia Commons; see `public/images/ATTRIBUTION.md`. Replace them with your own product photography.
 - The store is SQLite via `node:sqlite` (flag `--experimental-sqlite` on Node 22). Any database with a unique constraint and a conditional update works the same way.
 
 ## Tests

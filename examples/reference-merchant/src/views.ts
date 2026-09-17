@@ -1,6 +1,6 @@
 import { messages, formatAmount, formatDateTime, type Lang } from "./i18n.js";
 import type { OrderRow, OrderItem, CartLine } from "./store.js";
-import { PRODUCTS, findProduct, productSvg, type Product } from "./catalog.js";
+import { PRODUCTS, findProduct, productImg, type Product } from "./catalog.js";
 import type { AcknowledgeResult } from "../../../src/index.js";
 
 export function esc(s: unknown): string {
@@ -28,7 +28,7 @@ p{margin:.3rem 0 1rem;max-width:62ch}.lede{color:var(--ink-2);font-size:1.05rem;
 .money{font-family:var(--serif);font-variant-numeric:tabular-nums;font-weight:500;letter-spacing:-.01em}
 /* catalog */
 .lead{display:grid;grid-template-columns:1.2fr 1fr;gap:2.5rem;align-items:center;margin:2.5rem 0 3rem}.lead .art{aspect-ratio:4/3}
-.art{display:block;overflow:hidden;border-radius:6px;background:var(--sand-2)}.art svg{display:block;width:100%;height:100%}
+.art{display:block;overflow:hidden;border-radius:6px;background:var(--sand-2)}.art img{display:block;width:100%;height:100%;object-fit:cover}
 .lead h2{font-size:1.8rem}.lead .money{font-size:1.5rem}
 .list{display:grid;grid-template-columns:repeat(3,1fr);gap:2rem 1.5rem}.item .art{aspect-ratio:1}.item h2{font-size:1.1rem;margin:.9rem 0 .15rem;font-family:var(--sans);font-weight:600}
 .item p{color:var(--ink-2);font-size:.92rem;margin:0 0 .5rem}.item .money{font-size:1.15rem}
@@ -46,7 +46,7 @@ button:hover,.btn:hover{background:var(--blue-ink);border-color:var(--blue-ink);
 /* tables */
 table{border-collapse:collapse;width:100%}th,td{padding:.75rem .2rem;text-align:start;border-bottom:1px solid var(--rule);vertical-align:middle}th{font-weight:500;color:var(--ink-2);font-size:.9rem}
 td.num,th.num{text-align:end;white-space:nowrap}tfoot th,tfoot td{border-bottom:0;padding-top:.6rem}tfoot tr:last-child th,tfoot tr:last-child td{font-size:1.15rem;color:var(--ink);font-weight:500}
-.thumb{width:3.4rem;height:3.4rem;border-radius:4px;overflow:hidden;display:inline-block;vertical-align:middle;margin-inline-end:.8rem;background:var(--sand-2)}.thumb svg{width:100%;height:100%;display:block}
+.thumb{width:3.4rem;height:3.4rem;border-radius:4px;overflow:hidden;display:inline-block;vertical-align:middle;margin-inline-end:.8rem;background:var(--sand-2)}.thumb img{width:100%;height:100%;display:block;object-fit:cover}
 .line form{display:inline-flex;gap:.4rem;align-items:center}
 /* checkout */
 .split{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(18rem,.9fr);gap:3rem;align-items:start}.summary{position:sticky;top:1.5rem;background:var(--sand-2);border-radius:6px;padding:1.4rem 1.5rem}
@@ -103,14 +103,14 @@ export function catalogPage(ctx: Ctx, notice?: string): string {
   const t = messages[ctx.lang];
   const [lead, ...rest] = PRODUCTS;
   const items = rest
-    .map((p) => `<article class="item"><span class="art">${productSvg(p)}</span><h2>${esc(p.name[ctx.lang])}</h2><p>${esc(p.blurb[ctx.lang])}</p><div class="money">${esc(formatAmount(p.priceMinor, ctx.lang))}</div>${addForm(t, p)}</article>`)
+    .map((p) => `<article class="item"><span class="art">${productImg(p, ctx.lang)}</span><h2>${esc(p.name[ctx.lang])}</h2><p>${esc(p.blurb[ctx.lang])}</p><div class="money">${esc(formatAmount(p.priceMinor, ctx.lang))}</div>${addForm(t, p)}</article>`)
     .join("");
   return layout(
     ctx,
     t.catalog,
     `${notice ? `<p class="alert good" role="status">${esc(notice)}</p>` : ""}
 <h1>${esc(t.catalog)}</h1><p class="lede">${esc(t.tagline)}</p>
-<section class="lead"><span class="art">${productSvg(lead!)}</span><div><h2>${esc(lead!.name[ctx.lang])}</h2><p>${esc(lead!.blurb[ctx.lang])}</p><div class="money">${esc(formatAmount(lead!.priceMinor, ctx.lang))}</div>${addForm(t, lead!)}</div></section>
+<section class="lead"><span class="art">${productImg(lead!, ctx.lang, "(max-width: 52rem) 100vw, 55vw")}</span><div><h2>${esc(lead!.name[ctx.lang])}</h2><p>${esc(lead!.blurb[ctx.lang])}</p><div class="money">${esc(formatAmount(lead!.priceMinor, ctx.lang))}</div>${addForm(t, lead!)}</div></section>
 <section class="list">${items}</section>`,
   );
 }
@@ -138,7 +138,7 @@ function linesTable(lang: Lang, lines: PricedLine[], totalMinor: string, editabl
   const t = messages[lang];
   const rows = lines
     .map(
-      ({ product, quantity, lineMinor }) => `<tr class="line"><td><span class="thumb">${productSvg(product)}</span>${esc(product.name[lang])}</td>
+      ({ product, quantity, lineMinor }) => `<tr class="line"><td><span class="thumb">${productImg(product, lang, "4rem")}</span>${esc(product.name[lang])}</td>
 <td class="num">${editable ? `<form method="post" action="/cart/update"><input type="hidden" name="product" value="${product.id}"><input type="number" name="quantity" value="${quantity}" min="0" max="99" aria-label="${esc(t.quantity)}"><button class="quiet" type="submit">${esc(t.update)}</button></form>` : `× ${quantity}`}</td>
 <td class="num money">${esc(formatAmount(lineMinor, lang))}</td></tr>`,
     )

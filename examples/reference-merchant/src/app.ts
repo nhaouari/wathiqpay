@@ -4,6 +4,10 @@
  * -> return -> acknowledge -> compare -> fulfil once -> receipt.
  */
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import { readFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { once } from "node:events";
 import { randomBytes } from "node:crypto";
 import { createClient, classifyPayment, paymentMatchesOrder, fromMinorUnits, isWathiqPayError, redact, type AcknowledgeResult, type WathiqPayClient } from "../../../src/index.js";
@@ -26,6 +30,11 @@ export interface MerchantApp {
   reconcile(olderThanSeconds?: number): Promise<Array<{ orderNumber: string; state: OrderState }>>;
   log: string[];
 }
+
+// Compiled output lives under build/, which tsc does not copy assets into,
+// so fall back to the source tree's public/ directory.
+const HERE = dirname(fileURLToPath(import.meta.url));
+const PUBLIC_DIR = [join(HERE, "..", "public"), join(HERE, "..", "..", "..", "..", "examples", "reference-merchant", "public")].find((d) => existsSync(d)) ?? join(HERE, "..", "public");
 
 export function createApp(config: MerchantConfig, deps: { mailer?: Mailer; store?: OrderStore } = {}): MerchantApp {
   const store = deps.store ?? new OrderStore(config.dbPath);
@@ -121,6 +130,20 @@ export function createApp(config: MerchantConfig, deps: { mailer?: Mailer; store
     };
     const method = req.method ?? "GET";
     const path = url.pathname;
+
+    // Static product images (whitelisted names only; no path traversal).
+    const img = /^\/images\/([a-z0-9-]+\.jpg)$/.exec(path);
+    if (img && method === "GET") {
+      try {
+        const bytes = await readFile(join(PUBLIC_DIR, "images", img[1]!));
+        res.writeHead(200, { "content-type": "image/jpeg", "cache-control": "public, max-age=86400", "content-length": bytes.length });
+        res.end(bytes);
+      } catch {
+        res.writeHead(404, { "content-type": "text/plain" });
+        res.end("not found");
+      }
+      return;
+    }
 
     // Language switch; kept in a cookie so every page, the SATIM request, and the receipt agree.
     let m = /^\/lang\/(\w+)$/.exec(path);
