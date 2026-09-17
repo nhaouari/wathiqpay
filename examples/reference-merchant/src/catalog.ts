@@ -23,5 +23,5 @@ export function findProduct(id: string): Product | undefined {
 }
 
 export function productSvg(p: Product): string {
-  return `<svg viewBox="0 0 100 100" role="img" aria-hidden="true"><rect width="100" height="100" rx="12" fill="${p.art.bg}"/><path d="${p.art.glyph}" fill="none" stroke="${p.art.fg}" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+  return `<svg viewBox="0 0 100 100" role="img" aria-hidden="true" preserveAspectRatio="xMidYMid slice"><rect width="100" height="100" fill="${p.art.bg}"/><circle cx="50" cy="54" r="34" fill="${p.art.fg}" opacity=".12"/><path d="${p.art.glyph}" fill="${p.art.fg}" fill-opacity=".18" stroke="${p.art.fg}" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
 }

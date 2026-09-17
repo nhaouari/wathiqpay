@@ -25,6 +25,9 @@ export interface OrderItem {
 export interface OrderRow {
   orderNumber: string;
   sessionId: string | null;
+  customerName: string | null;
+  customerPhone: string | null;
+  customerAddress: string | null;
   customerEmail: string | null;
   satimOrderId: string | null;
   amountMinor: string;
@@ -98,6 +101,9 @@ export class OrderStore {
     const cols = (this.db.prepare(`PRAGMA table_info(orders)`).all() as Array<{ name: string }>).map((c) => c.name);
     if (!cols.includes("session_id")) this.db.exec(`ALTER TABLE orders ADD COLUMN session_id TEXT`);
     if (!cols.includes("customer_email")) this.db.exec(`ALTER TABLE orders ADD COLUMN customer_email TEXT`);
+    if (!cols.includes("customer_name")) this.db.exec(`ALTER TABLE orders ADD COLUMN customer_name TEXT`);
+    if (!cols.includes("customer_phone")) this.db.exec(`ALTER TABLE orders ADD COLUMN customer_phone TEXT`);
+    if (!cols.includes("customer_address")) this.db.exec(`ALTER TABLE orders ADD COLUMN customer_address TEXT`);
   }
 
   // ---- cart -------------------------------------------------------------
@@ -135,12 +141,15 @@ export class OrderStore {
     description: string;
     language: OrderRow["language"];
     sessionId?: string;
+    customerName?: string | null;
+    customerPhone?: string | null;
+    customerAddress?: string | null;
     customerEmail?: string | null;
     items?: OrderItem[];
   }): OrderRow {
     const stmt = this.db.prepare(
-      `INSERT INTO orders (order_number, amount_minor, currency, description, language, state, created_at, session_id, customer_email)
-       VALUES (?, ?, 'DZD', ?, ?, 'pending', ?, ?, ?)`,
+      `INSERT INTO orders (order_number, amount_minor, currency, description, language, state, created_at, session_id, customer_email, customer_name, customer_phone, customer_address)
+       VALUES (?, ?, 'DZD', ?, ?, 'pending', ?, ?, ?, ?, ?, ?)`,
     );
     const itemStmt = this.db.prepare(`INSERT INTO order_items (order_number, product_id, name, unit_minor, quantity) VALUES (?, ?, ?, ?, ?)`);
     for (let attempt = 0; attempt < 5; attempt += 1) {
@@ -148,7 +157,7 @@ export class OrderStore {
       try {
         this.db.exec("BEGIN IMMEDIATE");
         try {
-          stmt.run(orderNumber, input.amountMinor, input.description, input.language, now(), input.sessionId ?? null, input.customerEmail ?? null);
+          stmt.run(orderNumber, input.amountMinor, input.description, input.language, now(), input.sessionId ?? null, input.customerEmail ?? null, input.customerName ?? null, input.customerPhone ?? null, input.customerAddress ?? null);
           for (const it of input.items ?? []) itemStmt.run(orderNumber, it.productId, it.name, it.unitMinor, it.quantity);
           this.db.exec("COMMIT");
         } catch (e) {
@@ -250,6 +259,9 @@ function toRow(r: Record<string, unknown>): OrderRow {
   return {
     orderNumber: r["order_number"] as string,
     sessionId: (r["session_id"] as string | null) ?? null,
+    customerName: (r["customer_name"] as string | null) ?? null,
+    customerPhone: (r["customer_phone"] as string | null) ?? null,
+    customerAddress: (r["customer_address"] as string | null) ?? null,
     customerEmail: (r["customer_email"] as string | null) ?? null,
     satimOrderId: (r["satim_order_id"] as string | null) ?? null,
     amountMinor: r["amount_minor"] as string,

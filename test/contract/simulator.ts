@@ -97,17 +97,20 @@ export class Simulator {
       return;
     }
     const amount = `${o.amount.slice(0, -2) || "0"}.${o.amount.slice(-2)} DZD`;
-    const html = `<!doctype html><html><head><meta charset="utf-8"><title>SIMULATED hosted payment page</title>
-<style>body{font-family:system-ui;max-width:32rem;margin:3rem auto;padding:0 1rem}button{display:block;width:100%;margin:.4rem 0;padding:.7rem}</style></head>
-<body><h1>Simulated SATIM page</h1><p><strong>This is a local simulator, not SATIM.</strong> No card data is entered here.</p>
-<p>Order <code>${o.orderNumber}</code> · Amount <strong>${amount}</strong></p>
+    const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Simulated SATIM page</title>
+<style>body{margin:0;background:#EEF1F5;font-family:system-ui,sans-serif;color:#1c2431}.box{max-width:26rem;margin:4rem auto;background:#fff;border-radius:8px;padding:2rem;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+h1{font-size:1.2rem;margin:0 0 .3rem}.warn{background:#FFF4D6;border:1px solid #F1D48A;border-radius:6px;padding:.6rem .8rem;font-size:.9rem;margin:1rem 0}
+dl{display:grid;grid-template-columns:auto 1fr;gap:.3rem 1rem;font-size:.95rem}dt{color:#5b6470}dd{margin:0}.amt{font-size:1.6rem;font-weight:600;margin:.6rem 0 1.2rem}
+button{display:block;width:100%;margin:.4rem 0;padding:.7rem;font:inherit;border-radius:6px;border:1px solid #cfd6e0;background:#fff;cursor:pointer;text-align:start}button.primary{background:#1B4F86;border-color:#1B4F86;color:#fff}</style></head>
+<body><div class="box"><h1>Simulated SATIM page</h1><div class="warn">Local simulator, not SATIM. No card data is entered here.</div>
+<dl><dt>Order</dt><dd>${o.orderNumber}</dd><dt>Amount</dt><dd class="amt">${amount}</dd></dl>
 <form method="post" action="/hosted/${orderId}/decide">
-<button name="outcome" value="paid">Simulate accepted payment</button>
+<button class="primary" name="outcome" value="paid">Simulate accepted payment</button>
 <button name="outcome" value="declined">Simulate declined card</button>
 <button name="outcome" value="reversed">Simulate reversal</button>
 <button name="outcome" value="approved-one-phase">Simulate undocumented status 1</button>
 <button name="outcome" value="abandon">Simulate closed browser</button>
-</form></body></html>`;
+</form></div></body></html>`;
     send(res, 200, html, { "content-type": "text/html; charset=utf-8" });
   }
 

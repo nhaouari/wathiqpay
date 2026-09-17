@@ -2,8 +2,11 @@ export type Lang = "FR" | "AR" | "EN";
 
 const fr = {
   dir: "ltr",
-  shopTitle: "Boutique de démonstration WathiqPay",
-  catalog: "Nos produits",
+  shopTitle: "Maison Wathiq",
+  catalog: "Épicerie fine et artisanat d'Algérie",
+  tagline: "Livraison offerte partout en Algérie. Paiement sécurisé par carte CIB ou Edahabia.",
+  payAmount: "Payer",
+  shop: "Boutique",
   addToCart: "Ajouter au panier",
   cart: "Panier",
   cartEmpty: "Votre panier est vide.",
@@ -17,6 +20,15 @@ const fr = {
   checkout: "Paiement de la commande",
   orderSummary: "Récapitulatif de la commande",
   customerEmail: "E-mail (facultatif, pour le reçu)",
+  customerDetails: "Vos coordonnées",
+  fullName: "Nom complet",
+  phone: "Téléphone",
+  phoneHint: "Numéro algérien, ex. 05 50 12 34 56",
+  address: "Adresse de livraison (facultatif)",
+  nameRequired: "Indiquez votre nom complet.",
+  phoneInvalid: "Indiquez un numéro de téléphone algérien valide (05, 06 ou 07 suivi de 8 chiffres).",
+  emailInvalid: "L'adresse e-mail n'est pas valide.",
+  customer: "Client",
   myOrders: "Mes commandes",
   noOrders: "Aucune commande pour le moment.",
   status: "Statut",
@@ -70,8 +82,11 @@ const fr = {
 
 const en: typeof fr = {
   dir: "ltr",
-  shopTitle: "WathiqPay demo shop",
-  catalog: "Our products",
+  shopTitle: "Maison Wathiq",
+  catalog: "Fine food and craft from Algeria",
+  tagline: "Free delivery across Algeria. Secure payment by CIB or Edahabia card.",
+  payAmount: "Pay",
+  shop: "Shop",
   addToCart: "Add to cart",
   cart: "Cart",
   cartEmpty: "Your cart is empty.",
@@ -85,6 +100,15 @@ const en: typeof fr = {
   checkout: "Checkout",
   orderSummary: "Order summary",
   customerEmail: "Email (optional, for the receipt)",
+  customerDetails: "Your details",
+  fullName: "Full name",
+  phone: "Telephone",
+  phoneHint: "Algerian number, e.g. 05 50 12 34 56",
+  address: "Delivery address (optional)",
+  nameRequired: "Enter your full name.",
+  phoneInvalid: "Enter a valid Algerian telephone number (05, 06 or 07 followed by 8 digits).",
+  emailInvalid: "The email address is not valid.",
+  customer: "Customer",
   myOrders: "My orders",
   noOrders: "No orders yet.",
   status: "Status",
@@ -138,8 +162,11 @@ const en: typeof fr = {
 
 const ar: typeof fr = {
   dir: "rtl",
-  shopTitle: "متجر WathiqPay التجريبي",
-  catalog: "منتجاتنا",
+  shopTitle: "دار وثيق",
+  catalog: "أطايب ومصنوعات حرفية من الجزائر",
+  tagline: "توصيل مجاني في كل الجزائر. دفع آمن ببطاقة CIB أو الذهبية.",
+  payAmount: "ادفع",
+  shop: "المتجر",
   addToCart: "أضف إلى السلة",
   cart: "السلة",
   cartEmpty: "سلتك فارغة.",
@@ -153,6 +180,15 @@ const ar: typeof fr = {
   checkout: "إتمام الطلب",
   orderSummary: "ملخص الطلب",
   customerEmail: "البريد الإلكتروني (اختياري، للإيصال)",
+  customerDetails: "بياناتك",
+  fullName: "الاسم الكامل",
+  phone: "الهاتف",
+  phoneHint: "رقم جزائري، مثال 05 50 12 34 56",
+  address: "عنوان التوصيل (اختياري)",
+  nameRequired: "أدخل اسمك الكامل.",
+  phoneInvalid: "أدخل رقم هاتف جزائري صحيح (05 أو 06 أو 07 متبوعًا بـ 8 أرقام).",
+  emailInvalid: "البريد الإلكتروني غير صالح.",
+  customer: "الزبون",
   myOrders: "طلباتي",
   noOrders: "لا توجد طلبات بعد.",
   status: "الحالة",
@@ -220,6 +256,6 @@ export function formatAmount(minor: string, lang: Lang): string {
 }
 
 export function formatDateTime(iso: string, lang: Lang): string {
-  const locale = lang === "AR" ? "ar-DZ" : lang === "EN" ? "en-GB" : "fr-DZ";
-  return new Intl.DateTimeFormat(locale, { dateStyle: "long", timeStyle: "medium", timeZone: "Africa/Algiers" }).format(new Date(iso));
+  const locale = lang === "AR" ? "ar-DZ" : lang === "EN" ? "en-GB" : "fr-FR";
+  return new Intl.DateTimeFormat(locale, { dateStyle: "long", timeStyle: "short", hour12: false, timeZone: "Africa/Algiers" }).format(new Date(iso));
 }

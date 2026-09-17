@@ -83,7 +83,7 @@ describe("reference merchant journey against the simulator", () => {
   });
 
   /** Add items to the cart and submit the checkout; returns the hosted page (or the error page). */
-  async function checkout(b: Browser, opts: { captcha?: string; terms?: string; items?: Array<[string, string]>; email?: string } = {}): Promise<Page> {
+  async function checkout(b: Browser, opts: { captcha?: string; terms?: string; items?: Array<[string, string]>; email?: string; name?: string; phone?: string } = {}): Promise<Page> {
     for (const [product, quantity] of opts.items ?? [["dates", "1"]]) {
       await b.go(`${origin}/cart/add`, { method: "POST", form: { product, quantity } });
     }
@@ -91,7 +91,7 @@ describe("reference merchant journey against the simulator", () => {
     const c = captchaFrom(page.body);
     return b.go(`${origin}/checkout`, {
       method: "POST",
-      form: { terms: opts.terms ?? "yes", captcha: opts.captcha ?? c.answer, captchaToken: c.token, email: opts.email ?? "" },
+      form: { name: opts.name ?? "Amina Benali", phone: opts.phone ?? "+213 550 12 34 56", address: "12 rue Didouche Mourad, Alger", terms: opts.terms ?? "yes", captcha: opts.captcha ?? c.answer, captchaToken: c.token, email: opts.email ?? "" },
     });
   }
 
@@ -132,6 +132,13 @@ describe("reference merchant journey against the simulator", () => {
     assert.match(bad.body, /anti-robot a échoué/);
     const noTerms = await checkout(b, { terms: "" });
     assert.equal(noTerms.status, 400);
+    const noName = await checkout(b, { name: " " });
+    assert.equal(noName.status, 400);
+    assert.match(noName.body, /nom complet/);
+    const badPhone = await checkout(b, { phone: "0412345678" });
+    assert.equal(badPhone.status, 400);
+    assert.match(badPhone.body, /numéro de téléphone/);
+    assert.match(badPhone.body, /value="Amina Benali"/, "typed values are kept on re-render");
     assert.equal(sim.requests.length, before, "no gateway request was made");
   });
 
@@ -160,6 +167,10 @@ describe("reference merchant journey against the simulator", () => {
     assert.match(orders.body, new RegExp(`${ref}[\\s\\S]*Payée`));
     const detail = await b.go(`${origin}/orders/${ref}`);
     assert.match(detail.body, /receipt\.pdf/);
+    assert.match(detail.body, /Amina Benali/);
+    assert.match(detail.body, /0550123456/, "phone normalised to national form");
+    const stored = await (await fetch(`${origin}/admin/orders/${ref}`)).json() as { customerName: string; customerPhone: string };
+    assert.equal(stored.customerPhone, "0550123456");
     const foreign = await new Browser().go(`${origin}/orders/${ref}`);
     assert.equal(foreign.status, 404, "another session cannot open the order");
     assert.match(result.body, /3020/);
@@ -289,7 +300,7 @@ describe("reference merchant journey against the simulator", () => {
       await b.go(`${o}/cart/add`, { method: "POST", form: { product: "dates", quantity: "1" } });
       const page = await b.go(`${o}/checkout`);
       const c = captchaFrom(page.body);
-      const res = await b.go(`${o}/checkout`, { method: "POST", form: { terms: "yes", captcha: c.answer, captchaToken: c.token } });
+      const res = await b.go(`${o}/checkout`, { method: "POST", form: { name: "Test", phone: "0661223344", terms: "yes", captcha: c.answer, captchaToken: c.token } });
       assert.equal(res.status, 502);
       assert.match(res.body, /pas pu être enregistrée/);
       assert.doesNotMatch(res.body, /wrong/);

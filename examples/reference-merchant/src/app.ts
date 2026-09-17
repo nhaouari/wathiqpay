@@ -159,11 +159,20 @@ export function createApp(config: MerchantConfig, deps: { mailer?: Mailer; store
       const form = await readForm(req);
       const cart = priceCart(store.getCart(session));
       if (cart.lines.length === 0) return redirect("/cart");
-      const email = (form.get("email") ?? "").trim();
-      const rerender = (error: string) => html(400, checkoutPage(ctx(), cart, createChallenge(config.captchaSecret), { error, email }));
+      const customer = {
+        name: (form.get("name") ?? "").trim().replace(/\s+/g, " ").slice(0, 80),
+        phone: (form.get("phone") ?? "").trim(),
+        address: (form.get("address") ?? "").trim().slice(0, 200),
+        email: (form.get("email") ?? "").trim(),
+      };
+      const rerender = (error: string) => html(400, checkoutPage(ctx(), cart, createChallenge(config.captchaSecret), { error, customer }));
+      if (customer.name.length < 2) return rerender(t.nameRequired);
+      const phone = normalizeAlgerianPhone(customer.phone);
+      if (!phone) return rerender(t.phoneInvalid);
+      if (customer.email && !isPlausibleEmail(customer.email)) return rerender(t.emailInvalid);
       if (form.get("terms") !== "yes") return rerender(t.termsRequired);
       if (!verify(config.captchaSecret, form.get("captchaToken") ?? undefined, form.get("captcha") ?? undefined)) return rerender(t.captchaFailed);
-      if (email && !isPlausibleEmail(email)) return rerender(t.emailAddress);
+      const email = customer.email;
 
       // 1. Persist first. 2. Register. 3. Store orderId. 4. Redirect to formUrl only.
       const order = store.createPending({
@@ -171,6 +180,9 @@ export function createApp(config: MerchantConfig, deps: { mailer?: Mailer; store
         description: cart.lines.map((l) => `${l.product.name[lang]} x${l.quantity}`).join(", ").slice(0, 512),
         language: lang,
         sessionId: session,
+        customerName: customer.name,
+        customerPhone: phone,
+        customerAddress: customer.address || null,
         customerEmail: email || null,
         items: cart.lines.map((l) => ({ productId: l.product.id, name: l.product.name[lang], unitMinor: l.product.priceMinor, quantity: l.quantity })),
       });
@@ -228,7 +240,7 @@ export function createApp(config: MerchantConfig, deps: { mailer?: Mailer; store
       const order = store.get(m[1]!);
       if (!order || order.state !== "paid" || !order.ackJson) return html(404, notFoundPage(ctx()));
       const data = { order, ack: JSON.parse(order.ackJson) as AcknowledgeResult };
-      if (!m[2]) return html(200, receiptPage({ ...ctx(), lang: order.language }, data));
+      if (!m[2]) return html(200, receiptPage({ ...ctx(), lang: order.language }, data, store.items(order.orderNumber)));
       const pdf = renderPdf(order.language, data);
       res.writeHead(200, { "content-type": "application/pdf", "content-disposition": `attachment; filename="receipt-${order.orderNumber}.pdf"`, "cache-control": "no-store" });
       res.end(pdf);
@@ -318,6 +330,16 @@ export function createApp(config: MerchantConfig, deps: { mailer?: Mailer; store
       store.close();
     },
   };
+}
+
+/** Accept 0X XX XX XX XX (X in 5,6,7) or +213 / 00213 forms; return the national 10-digit form. */
+export function normalizeAlgerianPhone(raw: string): string | undefined {
+  const digits = raw.replace(/[\s.\-()]/g, "");
+  let m = /^(?:\+213|00213)([567]\d{8})$/.exec(digits);
+  if (m) return `0${m[1]}`;
+  m = /^0([567]\d{8})$/.exec(digits);
+  if (m) return `0${m[1]}`;
+  return undefined;
 }
 
 function clampQty(v: string | null | undefined, min = 1): number {
