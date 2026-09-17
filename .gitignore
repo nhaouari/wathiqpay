@@ -7,3 +7,5 @@ build/
 !.env.example
 test/live/secrets.json
 .DS_Store
+examples/reference-merchant/data/
+examples/reference-merchant/outbox/

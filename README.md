@@ -2,7 +2,7 @@
 
 WathiqPay is a server-side TypeScript/Node.js client for the SATIM e-commerce payment gateway (SATIM EPG/IPAY): order registration, hosted-page redirection, server-to-server acknowledgement, and refunds.
 
-Status: `0.1.0-alpha.0`, private, unpublished. The offline implementation is complete and tested; live certification access is pending (see [docs/live-evidence.md](docs/live-evidence.md)).
+Status: `0.1.0-alpha.0`, private, unpublished. The SDK and the reference merchant are complete and tested offline; live certification access is pending (see [docs/live-evidence.md](docs/live-evidence.md)).
 
 ## Requirements
 
@@ -66,8 +66,14 @@ Error messages never contain credentials or card data. Use `redact()` before log
 ```text
 npm run check         # type checks, unit + contract tests, build
 npm run test:package  # pack the tarball and test it in a clean consumer
+npm run test:merchant # reference merchant journey tests against the simulator
 npm run test:live     # opt-in smoke test against certification; reads .env (gitignored)
+npm run demo          # run the reference merchant shop with the local simulator
 ```
+
+## Reference merchant
+
+`examples/reference-merchant/` is the demonstrable payment solution for certification: checkout with terms and CAPTCHA, registration, hosted-page redirect, untrusted return handling, backend acknowledgement, exactly-once fulfilment, and printable, PDF, and email receipts in French, Arabic, and English. Its [README](examples/reference-merchant/README.md) maps each certification requirement to the code.
 
 Copy `.env.example` to `.env` for live tests. Never commit credentials or SATIM test cards.
 

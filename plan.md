@@ -1,6 +1,6 @@
 # WathiqPay open-source SDK plan
 
-Date: 17 September 2026 (revision 4). Status: Milestones A–C implemented offline (40 unit/contract tests, tarball consumer test, CI workflow). First live attempt made; see [live-evidence.md](docs/live-evidence.md). Certification and production readiness remain separate gates.
+Date: 17 September 2026 (revision 5). Status: Milestones A–D implemented offline (52 tests: unit, contract, tarball consumer, merchant journey; CI workflow). Reference merchant in `examples/reference-merchant/`. First live attempt made; see [live-evidence.md](docs/live-evidence.md). Certification and production readiness remain separate gates.
 
 ## Recommendation
 
@@ -151,17 +151,17 @@ Exit: the actual installable tarball works in a clean consumer and all offline c
 
 ### Milestone D — Build the reference merchant
 
-- [ ] Add minimal checkout, order persistence, and separate success/failure return routes.
-- [ ] Generate collision-resistant merchant order references within the documented limit and enforce uniqueness in storage.
-- [ ] Store SATIM `orderId` before redirecting to its returned `formUrl`.
-- [ ] Correlate returned identifiers with persisted orders; never trust query-string payment claims.
-- [ ] Acknowledge and compare verified amount, currency when available, and merchant order number before fulfillment.
-- [ ] Handle repeated returns with a transaction/unique constraint so fulfillment happens once.
-- [ ] Implement required checkout notices, CAPTCHA, branding, language consistency, and result messages.
-- [ ] Implement printable/PDF/email receipts outside the SDK, using confirmed transaction data.
-- [ ] Add merchant-browser tests against the simulator, including success, decline, reversal, unknown outcome, repeated return, and closed-browser scenarios.
+- [x] Add minimal checkout, order persistence, and separate success/failure return routes.
+- [x] Generate collision-resistant merchant order references within the documented limit and enforce uniqueness in storage.
+- [x] Store SATIM `orderId` before redirecting to its returned `formUrl`.
+- [x] Correlate returned identifiers with persisted orders; never trust query-string payment claims.
+- [x] Acknowledge and compare verified amount, currency when available, and merchant order number before fulfillment.
+- [x] Handle repeated returns with a transaction/unique constraint so fulfillment happens once.
+- [x] Implement required checkout notices, CAPTCHA, branding, language consistency, and result messages.
+- [x] Implement printable/PDF/email receipts outside the SDK, using confirmed transaction data.
+- [x] Add merchant-browser tests against the simulator, including success, decline, reversal, unknown outcome, repeated return, and closed-browser scenarios.
 
-Exit: a contributor can run the complete synthetic journey locally. Qualification readiness additionally requires the accepted submission scope, reviewed homologation requirements, and required receipt/UI data; if these are pending, only the local demonstration is complete.
+Exit: a contributor can run the complete synthetic journey locally (`npm run demo`, `npm run test:merchant`; done 17 September 2026). Qualification readiness additionally requires the accepted submission scope, reviewed homologation requirements, and required receipt/UI data; if these are pending, only the local demonstration is complete.
 
 ### Milestone E — Test against SATIM certification
 
@@ -219,7 +219,8 @@ npm run test:unit     # pure unit tests                                  (implem
 npm run test:contract # local HTTP simulator tests                       (implemented)
 npm run test:package  # pack + clean consumer checks                     (implemented)
 npm run test:live     # opt-in certification smoke test; reads .env      (implemented)
-npm run demo          # reference merchant with simulator by default     (Milestone D, not yet)
+npm run demo          # reference merchant with simulator by default     (implemented)
+npm run test:merchant # HTTP journey tests of the reference merchant     (implemented)
 ```
 
 Default all development and pull-request checks to synthetic/offline data. Use a short loop: failing contract example → implement → offline checks → inspect tarball. Batch live scenarios when an active testing slot is available, and turn confirmed findings into regression tests.

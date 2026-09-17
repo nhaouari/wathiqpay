@@ -4,14 +4,22 @@
   "private": true,
   "description": "Server-side TypeScript client for the SATIM e-commerce payment gateway (register, acknowledge, refund).",
   "type": "module",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
     "./package.json": "./package.json"
   },
-  "files": ["dist", "README.md"],
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "sideEffects": false,
   "scripts": {
     "clean": "rm -rf dist build",
@@ -22,7 +30,9 @@
     "test:contract": "npm run build:test && node --test 'build/test/contract/**/*.test.js'",
     "test:package": "npm run build && node test/package/run.mjs",
     "test:live": "npm run build:test && node build/test/live/smoke.js",
-    "check": "npm run typecheck && npm run build:test && node --test 'build/test/unit/**/*.test.js' 'build/test/contract/**/*.test.js' && npm run build"
+    "check": "npm run typecheck && npm run build:test && node --experimental-sqlite --no-warnings=ExperimentalWarning --test 'build/test/unit/**/*.test.js' 'build/test/contract/**/*.test.js' 'build/examples/reference-merchant/test/**/*.test.js' && npm run build",
+    "test:merchant": "npm run build:test && node --experimental-sqlite --no-warnings=ExperimentalWarning --test 'build/examples/reference-merchant/test/**/*.test.js'",
+    "demo": "npm run build:test && node --experimental-sqlite --no-warnings=ExperimentalWarning build/examples/reference-merchant/src/server.js"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

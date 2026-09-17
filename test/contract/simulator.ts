@@ -7,6 +7,8 @@ import { once } from "node:events";
 import { setTimeout as sleep } from "node:timers/promises";
 import * as fx from "../fixtures/synthetic/index.js";
 
+export type HostedOutcome = "paid" | "declined" | "reversed" | "approved-one-phase" | "abandon";
+
 export interface RecordedRequest {
   path: string;
   method: string;
@@ -25,7 +27,7 @@ export interface SimulatorOptions {
 
 export class Simulator {
   readonly requests: RecordedRequest[] = [];
-  readonly orders = new Map<string, { orderNumber: string; amount: string; status: number; refunded: bigint }>();
+  readonly orders = new Map<string, { orderNumber: string; amount: string; status: number; refunded: bigint; returnUrl: string; failUrl: string; respCode: string; description: string }>();
   private server: Server | undefined;
   private counter = 0;
   baseUrl = "";
@@ -52,8 +54,61 @@ export class Simulator {
 
   /** Mark an order as paid, as if the customer had completed the hosted page. */
   pay(orderId: string): void {
+    this.decide(orderId, "paid");
+  }
+
+  /** Apply a hosted-page outcome and return the redirect target for the browser. */
+  decide(orderId: string, outcome: HostedOutcome): string | undefined {
     const o = this.orders.get(orderId);
-    if (o) o.status = 2;
+    if (!o) return undefined;
+    const sep = (u: string) => (u.includes("?") ? "&" : "?");
+    switch (outcome) {
+      case "paid":
+        o.status = 2;
+        o.respCode = "00";
+        return `${o.returnUrl}${sep(o.returnUrl)}orderId=${orderId}`;
+      case "declined":
+        o.status = 6;
+        o.respCode = "51";
+        o.description = "Solde insuffisant";
+        return `${o.failUrl}${sep(o.failUrl)}orderId=${orderId}`;
+      case "reversed":
+        o.status = 3;
+        return `${o.failUrl}${sep(o.failUrl)}orderId=${orderId}`;
+      case "approved-one-phase":
+        o.status = 1;
+        return `${o.returnUrl}${sep(o.returnUrl)}orderId=${orderId}`;
+      case "abandon":
+        return undefined;
+    }
+  }
+
+  /** Minimal hosted payment page: shows the amount and lets a tester pick an outcome. */
+  private hosted(req: import("node:http").IncomingMessage, url: URL, text: string, res: import("node:http").ServerResponse): void {
+    const [, , orderId, action] = url.pathname.split("/");
+    const o = this.orders.get(orderId ?? "");
+    if (!o) return send(res, 404, "unknown order");
+    if (req.method === "POST" && action === "decide") {
+      const outcome = (new URLSearchParams(text).get("outcome") ?? "abandon") as HostedOutcome;
+      const target = this.decide(orderId!, outcome);
+      if (!target) return send(res, 200, "<p>Browser closed. No redirect.</p>", { "content-type": "text/html" });
+      res.writeHead(303, { location: target });
+      res.end();
+      return;
+    }
+    const amount = `${o.amount.slice(0, -2) || "0"}.${o.amount.slice(-2)} DZD`;
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>SIMULATED hosted payment page</title>
+<style>body{font-family:system-ui;max-width:32rem;margin:3rem auto;padding:0 1rem}button{display:block;width:100%;margin:.4rem 0;padding:.7rem}</style></head>
+<body><h1>Simulated SATIM page</h1><p><strong>This is a local simulator, not SATIM.</strong> No card data is entered here.</p>
+<p>Order <code>${o.orderNumber}</code> · Amount <strong>${amount}</strong></p>
+<form method="post" action="/hosted/${orderId}/decide">
+<button name="outcome" value="paid">Simulate accepted payment</button>
+<button name="outcome" value="declined">Simulate declined card</button>
+<button name="outcome" value="reversed">Simulate reversal</button>
+<button name="outcome" value="approved-one-phase">Simulate undocumented status 1</button>
+<button name="outcome" value="abandon">Simulate closed browser</button>
+</form></body></html>`;
+    send(res, 200, html, { "content-type": "text/html; charset=utf-8" });
   }
 
   private async handle(req: import("node:http").IncomingMessage, res: import("node:http").ServerResponse): Promise<void> {
@@ -61,6 +116,7 @@ export class Simulator {
     for await (const c of req) chunks.push(c as Buffer);
     const text = Buffer.concat(chunks).toString("utf8");
     const url = new URL(req.url ?? "/", "http://127.0.0.1");
+    if (url.pathname.startsWith("/hosted/")) return this.hosted(req, url, text, res);
     const path = url.pathname.replace(/^\/payment\/rest/, "");
     const form = Object.fromEntries(new URLSearchParams(text));
     this.requests.push({ path, method: req.method ?? "", headers: req.headers, form });
@@ -111,7 +167,16 @@ export class Simulator {
     }
     this.counter += 1;
     const orderId = `SIM${String(this.counter).padStart(6, "0")}`;
-    this.orders.set(orderId, { orderNumber: form["orderNumber"]!, amount: form["amount"]!, status: 0, refunded: 0n });
+    this.orders.set(orderId, {
+      orderNumber: form["orderNumber"]!,
+      amount: form["amount"]!,
+      status: 0,
+      refunded: 0n,
+      returnUrl: form["returnUrl"]!,
+      failUrl: form["failUrl"]!,
+      respCode: "",
+      description: "",
+    });
     return { errorCode: 0, orderId, formUrl: `${this.baseUrl.replace("/payment/rest", "")}/hosted/${orderId}` };
   }
 
@@ -121,6 +186,11 @@ export class Simulator {
     const base = { ErrorCode: "0", ErrorMessage: "Success", OrderStatus: o.status, OrderNumber: o.orderNumber, Amount: Number(o.amount), currency: "012" };
     if (o.status === 2) return { ...fx.ackPaid, ...base, depositAmount: Number(o.amount) };
     if (o.status === 4) return { ...fx.ackRefunded, ...base };
+    if (o.status === 1) return { ...fx.ackApprovedOnePhase, ...base };
+    if (o.status === 3) return { ...fx.ackReversed, ...base };
+    if (o.status === 6 || o.status === -1) {
+      return { ...fx.ackDeclined, ...base, actionCodeDescription: o.description, params: { respCode: o.respCode, respCode_desc: o.description } };
+    }
     return { ...base, actionCode: -100, actionCodeDescription: "", params: {} };
   }
 
