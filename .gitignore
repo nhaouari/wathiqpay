@@ -1,0 +1,9 @@
+node_modules/
+dist/
+build/
+*.tgz
+.env
+.env.*
+!.env.example
+test/live/secrets.json
+.DS_Store

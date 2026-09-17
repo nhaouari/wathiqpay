@@ -1,0 +1,31 @@
+{
+  "name": "wathiqpay",
+  "version": "0.1.0-alpha.0",
+  "private": true,
+  "description": "Server-side TypeScript client for the SATIM e-commerce payment gateway (register, acknowledge, refund).",
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+    "./package.json": "./package.json"
+  },
+  "files": ["dist", "README.md"],
+  "sideEffects": false,
+  "scripts": {
+    "clean": "rm -rf dist build",
+    "build": "tsc -p tsconfig.build.json",
+    "build:test": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test:unit": "npm run build:test && node --test 'build/test/unit/**/*.test.js'",
+    "test:contract": "npm run build:test && node --test 'build/test/contract/**/*.test.js'",
+    "test:package": "npm run build && node test/package/run.mjs",
+    "test:live": "npm run build:test && node build/test/live/smoke.js",
+    "check": "npm run typecheck && npm run build:test && node --test 'build/test/unit/**/*.test.js' 'build/test/contract/**/*.test.js' && npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.6.0"
+  }
+}
