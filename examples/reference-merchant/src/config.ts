@@ -46,6 +46,10 @@ export function configFromEnv(env: NodeJS.ProcessEnv = process.env): MerchantCon
           terminalId: required(env, "SATIM_TERMINAL_ID"),
           baseUrl: env["SATIM_BASE_URL"],
         };
+  const dbUrl = env["MERCHANT_DB_URL"] ?? (env["MERCHANT_DB"] ? `file:${env["MERCHANT_DB"]}` : "file:examples/reference-merchant/data/merchant.sqlite");
+  if (env["VERCEL"] && dbUrl.startsWith("file:")) {
+    throw new Error("MERCHANT_DB_URL must point to a hosted libSQL database (libsql://…) on Vercel; the filesystem there is read-only and not persistent. See examples/reference-merchant/deploy/vercel.md.");
+  }
   const adminToken = env["MERCHANT_ADMIN_TOKEN"] || undefined;
   if (mode !== "simulator" && !adminToken) throw new Error("MERCHANT_ADMIN_TOKEN is required outside simulator mode");
   return {
@@ -56,7 +60,7 @@ export function configFromEnv(env: NodeJS.ProcessEnv = process.env): MerchantCon
     smtpUrl: env["SMTP_URL"] || undefined,
     smtpFrom: env["SMTP_FROM"] ?? "receipts@merchant.example",
     publicUrl,
-    dbUrl: env["MERCHANT_DB_URL"] ?? (env["MERCHANT_DB"] ? `file:${env["MERCHANT_DB"]}` : "file:examples/reference-merchant/data/merchant.sqlite"),
+    dbUrl,
     dbAuthToken: env["MERCHANT_DB_AUTH_TOKEN"] || env["TURSO_AUTH_TOKEN"] || undefined,
     outboxDir: env["MERCHANT_OUTBOX"] ?? "examples/reference-merchant/outbox",
     captchaSecret: env["MERCHANT_CAPTCHA_SECRET"] ?? "dev-only-change-me",
