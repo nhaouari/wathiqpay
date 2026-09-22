@@ -53,6 +53,7 @@ export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer;
       : process.env["VERCEL"]
         ? createUnconfiguredMailer() // read-only filesystem: no outbox possible
         : createOutboxMailer(config.outboxDir));
+  const emailEnabled = mailer.enabled !== false;
   const log: string[] = [];
   const client = createClient({
     environment: config.mode,
@@ -111,7 +112,7 @@ export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer;
       case "paid":
         // Anyone returning from SATIM sees the payment result; receipt tools
         // (which reveal the customer's e-mail) are for the ordering session only.
-        return successPage(ctx, { order, ack: ack! }, await store.items(order.orderNumber), undefined, false, owner);
+        return successPage(ctx, { order, ack: ack! }, await store.items(order.orderNumber), undefined, false, owner, emailEnabled);
       case "declined":
         return failurePage(ctx, order, ack, "declined");
       case "reversed":
@@ -295,6 +296,7 @@ export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer;
     }
 
     m = /^\/orders\/([A-Z0-9]{1,10})\/receipt\/email$/.exec(path);
+    if (m && method === "POST" && !emailEnabled) return html(404, notFoundPage(await ctx()));
     if (m && method === "POST") {
       const order = await store.get(m[1]!);
       if (!order || order.sessionId !== session || order.state !== "paid" || !order.ackJson) return html(404, notFoundPage(await ctx()));
@@ -302,7 +304,7 @@ export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer;
       const email = (form.get("email") ?? "").trim();
       const data = { order, ack: JSON.parse(order.ackJson) as AcknowledgeResult };
       const pageCtx = { ...(await ctx()), lang: order.language };
-      if (!isPlausibleEmail(email)) return html(400, successPage(pageCtx, data, await store.items(order.orderNumber)));
+      if (!isPlausibleEmail(email)) return html(400, successPage(pageCtx, data, await store.items(order.orderNumber), undefined, false, true, emailEnabled));
       const t2 = messages[order.language];
       const items = await store.items(order.orderNumber);
       try {

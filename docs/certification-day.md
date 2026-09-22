@@ -11,7 +11,7 @@ Status: not yet ready for an unconditional pass. Local tests are not SATIM certi
 5. Deploy the tested revision; record the commit and deployment URL. *Commit `6472e50` is deployed at https://wathiqpay-demo2.vercel.app and was retested on 22 September 2026 for paid (FR, AR), cross-session receipt access, and the official pay-button artwork; the full card run is recorded in live-evidence.md against commit 3a2ae95.* Run paid, declined, cancellation, replay, cross-session access, partial/full refund result display, and receipt checks against that deployment. Do not create new real-money payments without approval.
 6. Configure host alert routing for `[merchant]` registration/acknowledgement failures, unknown payments, and mismatches; trigger a safe test alert and verify delivery. Logs alone are not alerts.
 7. Confirm acknowledgement deadlines and configure reconciliation accordingly. The daily Vercel schedule is not sufficient evidence of prompt recovery after a customer closes the browser. *A ten-minute schedule is ready in `.github/workflows/reconcile.yml`; it activates once the repository secrets `SHOP_URL` and `MERCHANT_ADMIN_TOKEN` are added.*
-8. Email delivery remains deferred by the owner. Obtain SATIM's explicit acceptance of that deferral, or complete delivery before a session that requires it. SMTP itself is a transport choice; do not assume the receipt-email requirement is waived.
+8. E-mail receipts are out of scope for now by owner decision (not required). The demo hides the e-mail form when no mail transport is configured; print and PDF receipts remain. Setting `SMTP_URL` later turns it back on with no code change.
 
 ## On the day
 

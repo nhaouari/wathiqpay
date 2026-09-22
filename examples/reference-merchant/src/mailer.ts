@@ -7,6 +7,8 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 export interface Mailer {
+  /** False when no transport exists; the shop then hides the e-mail receipt form. */
+  readonly enabled?: boolean;
   send(message: { to: string; subject: string; text: string; pdf: Buffer; pdfName: string }): Promise<{ id: string }>;
 }
 
@@ -50,6 +52,7 @@ export function isPlausibleEmail(value: string): boolean {
 /** Used where no mail transport exists (serverless without SMTP_URL): fails explicitly. */
 export function createUnconfiguredMailer(): Mailer {
   return {
+    enabled: false,
     async send() {
       throw new Error("no mail transport configured: set SMTP_URL");
     },

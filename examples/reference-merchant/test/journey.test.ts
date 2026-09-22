@@ -369,6 +369,34 @@ describe("Arabic PDF receipt", () => {
   });
 });
 
+describe("receipt e-mail disabled", () => {
+  test("without a mail transport the e-mail form is hidden and the endpoint is off", async () => {
+    const { createUnconfiguredMailer } = await import("../src/mailer.js");
+    const sim = new Simulator();
+    const baseUrl = await sim.start();
+    const cfg: MerchantConfig = { mode: "simulator", port: 0, host: "127.0.0.1", adminToken: undefined, smtpUrl: undefined, smtpFrom: "x@example.com", publicUrl: "http://127.0.0.1:0", dbUrl: ":memory:", dbAuthToken: undefined, outboxDir: "/dev/null", captchaSecret: "test", satim: { username: "user", password: "secret", terminalId: "E0000000000", baseUrl }, reconcileAfterSeconds: 0 };
+    const app = await createApp(cfg, { store: await OrderStore.open({ url: ":memory:" }), mailer: createUnconfiguredMailer() });
+    const o = await app.start(0);
+    cfg.publicUrl = o;
+    try {
+      const b = new Browser();
+      await b.go(`${o}/cart/add`, { method: "POST", form: { product: "dates", quantity: "1" } });
+      const page = await b.go(`${o}/checkout`);
+      const c = captchaFrom(page.body);
+      const hosted = await b.go(`${o}/checkout`, { method: "POST", form: { name: "Test", phone: "0661223344", terms: "yes", captcha: c.answer, captchaToken: c.token } });
+      const ref = sim.orders.get(/\/hosted\/(SIM\d+)/.exec(hosted.url)![1]!)!.orderNumber;
+      const result = await b.go(`${hosted.url}/decide`, { method: "POST", form: { outcome: "paid" } });
+      assert.match(result.body, /Paiement accepté/);
+      assert.match(result.body, /receipt\.pdf/, "print and PDF stay available");
+      assert.doesNotMatch(result.body, /receipt\/email/, "no e-mail form");
+      assert.equal((await b.go(`${o}/orders/${ref}/receipt/email`, { method: "POST", form: { email: "c@example.com" } })).status, 404);
+    } finally {
+      await app.stop();
+      await sim.stop();
+    }
+  });
+});
+
 describe("receipt e-mail failure", () => {
   test("a failing mail transport shows a clear message instead of an error page", async () => {
     const sim = new Simulator();

@@ -49,7 +49,7 @@ If the refund call times out, the SDK reports `outcome: indeterminate`. Acknowle
 | `[merchant] register failed … TransportError` in function logs | Checkout shows "could not be registered, no payment taken" | Check SATIM reachability from the host; on Vercel keep the function in `cdg1` |
 | `register failed … GatewayError … errorCode 5` | Same | Credentials, password-change requirement, or terminal link on the SATIM account |
 | `acknowledge failed` | Customer sees "payment being verified" | Order stays `registered`; reconciliation retries; nothing is fulfilled until confirmed |
-| `receipt e-mail failed` | Customer sees "receipt could not be e-mailed" | Check `SMTP_URL`; the PDF download still works |
+| `receipt e-mail failed` | Customer sees "receipt could not be e-mailed" | Only when `SMTP_URL` is set; check it. Without it the e-mail form is hidden |
 | Orders stuck in `unknown` or `review` | Admin order lookup | Compare with SATIM; never fulfil by hand without a matching acknowledgement |
 
 Alerting: the shop writes these lines to standard error with the `[merchant]` prefix. Route them to an alert (Vercel Log Drains, or `docker compose logs` to your log collector) with a rule on `register failed`, `acknowledge failed`, `payment unknown`, `payment mismatch`, and `receipt e-mail failed`. Refund acknowledgements without a remaining deposit balance, or with a balance exceeding the original amount, stay `unknown` pending investigation.

@@ -237,7 +237,7 @@ function receiptBlock(lang: Lang, data: ReceiptData, items: OrderItem[]): string
   return `<div class="receipt"><dl>${dl}<div class="big"><dt>${esc(amountRow[0])}</dt><dd class="money">${esc(amountRow[1])}</dd></div></dl>${list}</div>`;
 }
 
-export function successPage(ctx: Ctx, data: ReceiptData, items: OrderItem[], emailSentTo?: string, emailError?: boolean, owner = true): string {
+export function successPage(ctx: Ctx, data: ReceiptData, items: OrderItem[], emailSentTo?: string, emailError?: boolean, owner = true, emailEnabled = true): string {
   const t = messages[ctx.lang];
   const ref = data.order.orderNumber;
   return layout(
@@ -249,7 +249,7 @@ ${receiptBlock(ctx.lang, data, items)}
 ${owner ? `<div class="actions no-print"><a class="btn quiet" href="/orders/${ref}/receipt" target="_blank">${esc(t.print)}</a><a class="btn quiet" href="/orders/${ref}/receipt.pdf">${esc(t.downloadPdf)}</a></div>
 ${emailSentTo ? `<p class="alert good" role="status">${esc(t.emailSent)} ${esc(emailSentTo)}.</p>` : ""}
 ${emailError ? `<p class="alert bad" role="alert">${esc(t.emailFailed)}</p>` : ""}
-<form method="post" action="/orders/${ref}/receipt/email"><label class="field"><span>${esc(t.emailReceipt)}</span><input type="email" name="email" required value="${esc(data.order.customerEmail ?? "")}" autocomplete="email"></label><button class="quiet" type="submit">${esc(t.send)}</button></form>` : ""}
+${emailEnabled ? `<form method="post" action="/orders/${ref}/receipt/email"><label class="field"><span>${esc(t.emailReceipt)}</span><input type="email" name="email" required value="${esc(data.order.customerEmail ?? "")}" autocomplete="email"></label><button class="quiet" type="submit">${esc(t.send)}</button></form>` : ""}` : ""}
 <p style="margin-top:2rem"><a href="/">${esc(t.backToShop)}</a> &nbsp; <a href="/orders">${esc(t.myOrders)}</a></p></div>`,
   );
 }

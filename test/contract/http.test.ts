@@ -88,7 +88,8 @@ describe("failure modes", () => {
       const reg = await client.registerOrder(order("CMD000005"));
       sim.pay(reg.orderId);
       await assert.rejects(client.refund({ orderId: reg.orderId, amount: { value: "10.00", currency: "DZD" } }), (e: unknown) => e instanceof TransportError && e.kind === "timeout" && e.outcome === "indeterminate");
-      await new Promise((r) => setTimeout(r, 500));
+      // Wait (bounded) until the simulator has finished the delayed request.
+      for (let i = 0; i < 60 && sim.orders.get(reg.orderId)!.refunded === 0n; i += 1) await new Promise((r) => setTimeout(r, 50));
       const refundRequests = sim.requests.filter((r) => r.path === "/refund.do");
       assert.equal(refundRequests.length, 1, "exactly one refund request was sent");
       assert.equal(sim.orders.get(reg.orderId)!.refunded, 1000n, "the server did process the refund");

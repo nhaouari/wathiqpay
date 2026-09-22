@@ -32,7 +32,7 @@ The schema is created automatically on the first request.
 | `MERCHANT_CAPTCHA_SECRET` | `openssl rand -hex 32` |
 | `CRON_SECRET` | same value as `MERCHANT_ADMIN_TOKEN` (Vercel sends it on cron calls) |
 | `SATIM_USERNAME`, `SATIM_PASSWORD`, `SATIM_TERMINAL_ID` | certification credentials |
-| `SMTP_URL`, `SMTP_FROM` | optional; without SMTP the e-mail receipt cannot be delivered on Vercel because there is no persistent outbox |
+| `SMTP_URL`, `SMTP_FROM` | optional, not set for now; without them the e-mail receipt form is hidden and print/PDF receipts remain |
 
 4. Deploy. Then **Settings → Domains** on the demo project: add `demo.wathiqpay.com`. Because the domain's DNS is already on Vercel, the record is created for you.
 
@@ -46,5 +46,5 @@ curl -H "Authorization: Bearer $MERCHANT_ADMIN_TOKEN" https://demo.wathiqpay.com
 ## Differences from the Docker deployment
 
 - Reconciliation of abandoned orders runs every ten minutes from `.github/workflows/reconcile.yml` once the repository secrets `SHOP_URL` and `MERCHANT_ADMIN_TOKEN` are set, plus the Vercel cron in `vercel.json` once a day at 03:00 UTC (the most a Hobby plan allows; Pro plans may shorten the schedule) and on demand through the admin endpoint. Customers who return normally are acknowledged immediately either way.
-- No local outbox: set `SMTP_URL` for the e-mail receipt requirement to work.
+- No local outbox: without `SMTP_URL` the e-mail receipt form is hidden.
 - Cold starts add a few hundred milliseconds to the first request after idle.
