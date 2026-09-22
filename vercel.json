@@ -4,5 +4,5 @@
   "outputDirectory": "examples/reference-merchant/public",
   "rewrites": [{ "source": "/(.*)", "destination": "/api/merchant" }],
   "functions": { "api/merchant.ts": { "maxDuration": 30 } },
-  "crons": [{ "path": "/admin/reconcile", "schedule": "0 */6 * * *" }]
+  "crons": [{ "path": "/admin/reconcile", "schedule": "0 3 * * *" }]
 }
