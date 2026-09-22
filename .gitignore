@@ -6,6 +6,8 @@ build/
 .env.*
 !.env.example
 test/live/secrets.json
+cards-for-test.md
 .DS_Store
 examples/reference-merchant/data/
 examples/reference-merchant/outbox/
+test/live/out/

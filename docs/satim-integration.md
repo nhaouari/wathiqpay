@@ -218,7 +218,7 @@ Live-observed on 22 September 2026: before any payment attempt the response is `
 | `1` | Approved one-phase transaction; the same table also associates this phase with a preauthorization hold |
 | `2` | Amount deposited successfully |
 | `3` | Authorization reversed |
-| `4` | Refunded |
+| `4` | Refunded. Live-observed: set after *any* refund, including partial; `depositAmount` then holds the amount still captured (0 only when fully refunded) |
 | `6` | Authorization declined |
 
 The certification page defines an accepted payment using all of:

@@ -8,7 +8,7 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { randomBytes } from "node:crypto";
 
-export type OrderState = "pending" | "registered" | "paid" | "declined" | "reversed" | "refunded" | "unknown" | "review" | "failed";
+export type OrderState = "pending" | "registered" | "paid" | "declined" | "reversed" | "refunded" | "partially_refunded" | "unknown" | "review" | "failed";
 
 export interface CartLine {
   productId: string;

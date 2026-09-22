@@ -4,12 +4,12 @@ This checklist mirrors the accessible SATIM certification portal and adds backen
 
 ## 1. SATIM onboarding
 
-- [ ] Testing slot has been opened and is active.
-- [ ] Merchant username and password have been issued.
-- [ ] Virtual terminal ID has been issued.
+- [x] Testing slot has been opened and is active.
+- [x] Merchant username and password have been issued.
+- [x] Virtual terminal ID has been issued.
 - [ ] Certification and production endpoints have been confirmed in writing.
 - [ ] Merchant server IP allowlisting or certificate requirements have been confirmed.
-- [ ] Refund permission is enabled for the intended SATIM user.
+- [x] Refund permission is enabled for the intended SATIM user.
 - [ ] Development is complete before reserving the certification date.
 - [ ] Certification date is reserved and validated by SATIM.
 
@@ -80,25 +80,25 @@ This checklist mirrors the accessible SATIM certification portal and adds backen
 
 Use only SATIM-issued certification data stored outside source control.
 
-- [ ] Valid CIB card → payment accepted.
-- [ ] Temporarily blocked card → payment refused.
-- [ ] Lost card → payment refused.
-- [ ] Stolen card → payment refused.
-- [ ] Incorrect expiry date → payment refused.
-- [ ] Card absent from issuer server → payment refused.
-- [ ] Card limit exceeded → payment refused.
-- [ ] Insufficient balance → payment refused.
-- [ ] Incorrect CVV2 → payment refused.
-- [ ] Incorrect password → payment refused.
-- [ ] Three incorrect password attempts → payment refused.
-- [ ] Card not authorized for online payment → payment refused.
-- [ ] Card inactive for online payment → payment refused.
-- [ ] Terminal/transaction amount limit exceeded → payment refused.
-- [ ] Expired card → payment refused.
-- [ ] Valid credit scenario → expected successful result.
-- [ ] Connectivity between merchant and SATIM servers is verified.
-- [ ] Full refund through SATIM is successful.
-- [ ] Partial/multiple-refund rules are verified if the merchant needs them.
+- [x] Valid CIB card → payment accepted. *(22 Sept 2026, second attempt)*
+- [x] Temporarily blocked card → payment refused. *(AC 119 / RC 37)*
+- [x] Lost card → payment refused. *(AC 126 / RC 41)*
+- [x] Stolen card → payment refused. *(AC 127 / RC 43)*
+- [x] Incorrect expiry date → payment refused. *(AC 100882 / RC AD)*
+- [ ] Card absent from issuer server → payment refused. *Not testable: hosted page cannot select expiry 01/2025.*
+- [ ] Card limit exceeded → payment refused. *Observed approval at 50.00 DZD; amount to confirm with SATIM.*
+- [x] Insufficient balance → payment refused. *(AC 116 / RC 51)*
+- [x] Incorrect CVV2 → payment refused. *(AC 140 / RC AB)*
+- [ ] Incorrect password → payment refused. *Not exercised: driver enters the listed password.*
+- [x] Three incorrect password attempts → payment refused. *(AC 2003, declined before 3-D Secure)*
+- [x] Card not authorized for online payment → payment refused. *(AC 2003)*
+- [x] Card inactive for online payment → payment refused. *(AC 100254 / RC AE)*
+- [ ] Terminal/transaction amount limit exceeded → payment refused. *Observed approval at 999 999.00 DZD; to confirm with SATIM.*
+- [ ] Expired card → payment refused. *Observed approval with 12/2022; to confirm with SATIM.*
+- [x] Valid credit scenario → expected successful result.
+- [x] Connectivity between merchant and SATIM servers is verified.
+- [x] Full refund through SATIM is successful. *(two partial refunds summing to the deposit)*
+- [x] Partial/multiple-refund rules are verified if the merchant needs them. *(OS 4 with remaining depositAmount; over-refund → error 7)*
 - [ ] Transaction cancellation/reversal through SATIM is successful.
 
 ## 8. Release readiness

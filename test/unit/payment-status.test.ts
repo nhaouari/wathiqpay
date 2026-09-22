@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import * as fx from "../fixtures/synthetic/index.js";
 import { parseAcknowledgeResponse } from "../../src/responses.js";
-import { classifyPayment, paymentMatchesOrder } from "../../src/payment-status.js";
+import { classifyPayment, paymentMatchesOrder, refundedAmountMinor } from "../../src/payment-status.js";
 
 const classify = (raw: Record<string, unknown>) => classifyPayment(parseAcknowledgeResponse(raw));
 
@@ -42,4 +42,21 @@ test("paymentMatchesOrder compares order number and amount", () => {
   assert.deepEqual(paymentMatchesOrder(noAmount, { orderNumber: "CMD000123", amount: { value: "806.50", currency: "DZD" } }).mismatches, ["amount"]);
   const otherCurrency = parseAcknowledgeResponse({ ...fx.ackPaid, currency: "978" });
   assert.ok(paymentMatchesOrder(otherCurrency, { orderNumber: "CMD000123", amount: { value: "806.50", currency: "DZD" } }).mismatches.includes("currency"));
+});
+
+test("live-observed shapes classify as expected", () => {
+  assert.equal(classify(fx.ackPaidLive), "paid");
+  assert.equal(classify(fx.ackDeclinedLive), "declined");
+  assert.equal(classify(fx.ackDeclinedNoRespCodeLive), "declined");
+  assert.equal(classify(fx.ackPartiallyRefundedLive), "partially_refunded");
+  assert.equal(classify(fx.ackFullyRefundedLive), "refunded");
+  assert.equal(refundedAmountMinor(parseAcknowledgeResponse(fx.ackPartiallyRefundedLive)), "2000");
+  assert.equal(refundedAmountMinor(parseAcknowledgeResponse(fx.ackFullyRefundedLive)), "5000");
+  assert.equal(refundedAmountMinor(parseAcknowledgeResponse(fx.ackPaidLive)), "0");
+  assert.equal(refundedAmountMinor(parseAcknowledgeResponse({ ErrorCode: "0", OrderStatus: 4 })), undefined);
+  // Status 4 without a deposit figure stays "refunded" (older synthetic fixture).
+  assert.equal(classify({ ErrorCode: "0", OrderStatus: 4 }), "refunded");
+  const paid = parseAcknowledgeResponse(fx.ackPaidLive);
+  assert.equal(paid.approvalCode, "485040");
+  assert.equal(paid.respCodeDescription, "Votre paiement a été accepté.");
 });

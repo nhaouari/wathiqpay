@@ -4,7 +4,7 @@ export type { ClientConfig, CallOptions, Environment, WathiqPayClient } from "./
 export { toMinorUnits, fromMinorUnits, compareMinorUnits, isCurrencyCode, CURRENCY_NUMERIC, MoneyError } from "./money.js";
 export type { Money, CurrencyCode } from "./money.js";
 
-export { classifyPayment, paymentMatchesOrder, ORDER_STATUS } from "./payment-status.js";
+export { classifyPayment, paymentMatchesOrder, refundedAmountMinor, ORDER_STATUS } from "./payment-status.js";
 export type { PaymentState, ExpectedOrder, OrderMatch } from "./payment-status.js";
 
 export type {

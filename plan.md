@@ -170,11 +170,11 @@ Exit: a contributor can run the complete synthetic journey locally (`npm run dem
 - [ ] Verify that the reference merchant matches the submission scope agreed during the parallel track before running formal qualification scenarios.
 - [ ] Use explicit opt-in commands and local secrets for live tests, separate from ordinary CI.
 - [x] Run the reference merchant against certification and verify POST form encoding and actual response shapes. Registration and pre-payment acknowledgement verified 22 September 2026; see [live-evidence.md](docs/live-evidence.md).
-- [ ] Complete hosted payment entry manually with SATIM test data; exercise CAPTCHA/3-D Secure through the approved flow.
-- [ ] Run each applicable scenario in [certification-checklist.md](docs/certification-checklist.md).
+- [x] Complete hosted payment entry manually with SATIM test data; exercise CAPTCHA/3-D Secure through the approved flow. Done 22 September 2026 with a browser driver; the hosted flow has a static 3-D Secure password step.
+- [x] Run each applicable scenario in [certification-checklist.md](docs/certification-checklist.md). 11 of 15 card scenarios pass; 4 need SATIM clarification (see live evidence).
 - [ ] Verify acknowledgement behavior and abandoned-browser recovery with SATIM's documented guidance; do not assume acknowledgement is a harmless polling endpoint.
-- [ ] Verify refunds separately using refundable certification orders and approved amounts.
-- [ ] Record SDK commit/version, scenario, observed response shape, expected result, actual result, and evidence reference.
+- [x] Verify refunds separately using refundable certification orders and approved amounts. Partial, full, and over-refund verified 22 September 2026.
+- [x] Record SDK commit/version, scenario, observed response shape, expected result, actual result, and evidence reference. See [live-evidence.md](docs/live-evidence.md).
 - [x] Convert useful findings into sanitized regression fixtures after removing account/customer data. First three live fixtures added (register success, unpaid acknowledgement, unknown-order 401).
 
 Exit: live results support each advertised capability; unresolved scenarios remain explicitly unsupported or experimental.
@@ -243,8 +243,8 @@ Decisions fixed (SDK design decisions, not SATIM facts; details in section 3):
 - Language sent uppercase; caller input case-insensitive.
 - Amounts: DZD only; unsigned decimal strings with at most two fractional digits in, integer minor-unit strings on the wire, exact integer arithmetic; numeric inputs rejected.
 - No automatic retries of financial operations; lost responses after dispatch return `outcome: "indeterminate"`.
-- Refunds implemented in the alpha but marked experimental; no cancellation API; no `externalRefundId` until confirmed.
-- Payment classification returns `unknown` for any combination SATIM has not documented.
+- Refunds implemented and live-verified (partial, full, over-refund rejection) on 22 September 2026; no cancellation API; no `externalRefundId` until confirmed.
+- Payment classification returns `unknown` for any combination SATIM has not documented. Status 4 with a non-zero `depositAmount` is `partially_refunded` (live-observed).
 
 Known risks and how the plan handles them:
 

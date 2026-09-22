@@ -5,7 +5,7 @@
 import { compareMinorUnits, toMinorUnits, type Money } from "./money.js";
 import type { AcknowledgeResult } from "./responses.js";
 
-export type PaymentState = "registered" | "paid" | "declined" | "reversed" | "refunded" | "unknown";
+export type PaymentState = "registered" | "paid" | "declined" | "reversed" | "refunded" | "partially_refunded" | "unknown";
 
 export const ORDER_STATUS = Object.freeze({
   DECLINED_FALLBACK: -1,
@@ -28,7 +28,10 @@ export function classifyPayment(result: AcknowledgeResult): PaymentState {
       case ORDER_STATUS.REVERSED:
         return "reversed";
       case ORDER_STATUS.REFUNDED:
-        return "refunded";
+        // Live-observed (22 September 2026): after a partial refund SATIM
+        // reports OrderStatus 4 with depositAmount = amount still captured.
+        // Only a zero deposit means the whole payment was returned.
+        return result.depositAmountMinor !== undefined && compareMinorUnits(result.depositAmountMinor, "0") > 0 ? "partially_refunded" : "refunded";
       case ORDER_STATUS.DECLINED_FALLBACK:
       case ORDER_STATUS.AUTHORIZATION_DECLINED:
         return "declined";
@@ -40,6 +43,16 @@ export function classifyPayment(result: AcknowledgeResult): PaymentState {
   }
   if (errorCode === "2") return "declined"; // declined due to payment credentials
   return "unknown";
+}
+
+/**
+ * Amount returned to the customer so far, derived from Amount - depositAmount.
+ * Undefined when SATIM did not report both figures.
+ */
+export function refundedAmountMinor(result: AcknowledgeResult): string | undefined {
+  if (result.amountMinor === undefined || result.depositAmountMinor === undefined) return undefined;
+  const diff = BigInt(result.amountMinor) - BigInt(result.depositAmountMinor);
+  return diff < 0n ? undefined : diff.toString();
 }
 
 export interface ExpectedOrder {

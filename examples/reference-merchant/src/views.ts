@@ -65,7 +65,7 @@ small,.note{color:var(--ink-2);font-size:.85rem}
 .items{margin:1.2rem 0 0;padding:0;list-style:none}.items li{display:flex;justify-content:space-between;gap:1rem;padding:.35rem 0;border-bottom:1px dashed rgba(34,30,25,.2);font-size:.95rem}
 .support{margin:1.6rem 0 .4rem;font-weight:500}.actions{display:flex;flex-wrap:wrap;gap:.6rem;margin:1.4rem 0}
 .ok{color:var(--ok)}.ko{color:var(--ko)}.hold{color:var(--hold)}
-.state{display:inline-block;padding:.15rem .55rem;border-radius:3px;font-size:.82rem;font-weight:500;background:var(--sand-2);color:var(--ink-2)}.state.paid{background:#EAF3EC;color:var(--ok)}.state.declined,.state.failed,.state.reversed{background:#FBECEC;color:var(--ko)}.state.unknown,.state.review,.state.registered{background:#FBF1D9;color:var(--hold)}
+.state{display:inline-block;padding:.15rem .55rem;border-radius:3px;font-size:.82rem;font-weight:500;background:var(--sand-2);color:var(--ink-2)}.state.paid{background:#EAF3EC;color:var(--ok)}.state.declined,.state.failed,.state.reversed{background:#FBECEC;color:var(--ko)}.state.unknown,.state.review,.state.registered,.state.partially_refunded{background:#FBF1D9;color:var(--hold)}
 .empty{max-width:32rem;padding:2rem 0}
 @media(max-width:52rem){.lead,.split{grid-template-columns:1fr}.list{grid-template-columns:repeat(2,1fr);gap:1.5rem 1rem}.summary{position:static}header .wrap{flex-wrap:wrap;gap:.6rem 1.2rem}nav{margin-inline-start:0;flex-wrap:wrap;gap:.9rem;font-size:.92rem}}
 @media(max-width:34rem){.list{grid-template-columns:1fr}}

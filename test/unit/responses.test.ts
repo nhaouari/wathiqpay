@@ -107,3 +107,8 @@ test("interpretHttpResponse: 401 with a JSON string is a gateway rejection, othe
   assert.throws(() => interpretHttpResponse("refund", 502, ""), (e: unknown) => e instanceof TransportError && e.status === 502);
   assert.deepEqual(interpretHttpResponse("register", 200, '{"errorCode":0,"orderId":"x","formUrl":"y"}'), { errorCode: 0, orderId: "x", formUrl: "y" });
 });
+
+test("refund: live-observed success and invalid-state responses", () => {
+  assert.equal(parseRefundResponse(fx.refundSuccessLive).errorCode, "0");
+  assert.throws(() => parseRefundResponse(fx.refundImpossibleLive), (e: unknown) => e instanceof GatewayError && e.errorCode === "7");
+});

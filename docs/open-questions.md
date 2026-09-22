@@ -14,7 +14,7 @@ The accessible certification portal leaves the following points undocumented or 
 
 ## Transaction lifecycle
 
-8. Is `acknowledgeTransaction.do` safe and idempotent when called repeatedly? *Live-observed: two calls on an unpaid order returned identical responses. Behaviour after a paid outcome still unverified.*
+8. Is `acknowledgeTransaction.do` safe and idempotent when called repeatedly? *Live-observed: repeated calls on unpaid and on paid orders returned identical responses and changed nothing.*
 9. Does acknowledgement mutate transaction state, or only query/confirm it?
 10. Exactly how long may pass before an unacknowledged transaction is reversed? *Live-observed: the hosted page shows a session timer starting at about ten minutes; the acknowledgement window itself is still undocumented.*
 11. Is there a read-only transaction-status endpoint for reconciliation?
@@ -35,8 +35,8 @@ The accessible certification portal leaves the following points undocumented or 
 20. Are `language` and `currency` accepted or required by `refund.do`?
 21. Is `externalRefundId` supported? If so, what is its format and where must it be sent?
 22. What mechanism prevents duplicate refunds after a network timeout?
-23. Which `OrderStatus` values are refundable?
-24. What is the minimum partial-refund amount?
+23. Which `OrderStatus` values are refundable? *Live-observed: status 2 refundable; after any refund the status is 4 with `depositAmount` = remaining captured amount; a second partial refund from status 4 succeeded; refunding beyond the deposit returns error 7.*
+24. What is the minimum partial-refund amount? *Live-observed: 20.00 DZD and 30.00 DZD partial refunds accepted.*
 25. Is there a refund-status or refund-history endpoint?
 
 ## Request and response contract
@@ -72,3 +72,10 @@ CIBWeb explicitly confirms reusable payment-module certification. These question
 46. Which updates, merchant customizations, or forks require recertification?
 47. What are the certificate duration, renewal process, and ongoing developer obligations?
 48. What evidence and testing remain required during bank production activation for a merchant using the referenced module?
+
+## Raised by the card-scenario run of 22 September 2026
+
+49. Why was the first attempt with each certification card declined as "incorrect CVV" (actionCode 140, respCode AB) while the second attempt gave the expected result?
+50. Which amount triggers the "card limit exceeded" and "terminal/transaction amount limit exceeded" scenarios? Both cards were approved at 50.00 DZD and 999 999.00 DZD.
+51. The "expired card" test card (12/2022) was approved, and the hosted page's year picker cannot select 2025 for the "card no longer exists" card. Are these cards still current?
+52. Is the two-step flow (card page on `test.satim.dz`, static 3-D Secure password on `test2.satim.dz/acs`) identical in production?

@@ -42,6 +42,7 @@ describe("real fetch transport against the local simulator", () => {
     assert.equal(after.amountMinor, "80650");
 
     await client.refund({ orderId: reg.orderId, amount: { value: "300.00", currency: "DZD" } });
+    assert.equal(classifyPayment(await client.acknowledgeTransaction(reg.orderId)), "partially_refunded");
     await client.refund({ orderId: reg.orderId, amount: { value: "506.50", currency: "DZD" } });
     assert.equal(classifyPayment(await client.acknowledgeTransaction(reg.orderId)), "refunded");
     await assert.rejects(client.refund({ orderId: reg.orderId, amount: { value: "1.00", currency: "DZD" } }), GatewayError);

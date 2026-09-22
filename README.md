@@ -2,7 +2,7 @@
 
 WathiqPay is a server-side TypeScript/Node.js client for the SATIM e-commerce payment gateway (SATIM EPG/IPAY): order registration, hosted-page redirection, server-to-server acknowledgement, and refunds.
 
-Status: `0.1.0-alpha.0`, private, unpublished. The SDK and the reference merchant are complete and tested offline; live certification access is pending (see [docs/live-evidence.md](docs/live-evidence.md)).
+Status: `0.1.0-alpha.0`, private, unpublished. The SDK and the reference merchant are complete and tested offline, and registration, acknowledgement, 15 card scenarios, and refunds have been run against SATIM's certification gateway (see [docs/live-evidence.md](docs/live-evidence.md)).
 
 ## Requirements
 
@@ -35,14 +35,15 @@ const order = await satim.registerOrder({
 
 // 2. On return, confirm server-to-server. The redirect itself proves nothing.
 const payment = await satim.acknowledgeTransaction(order.orderId);
-const state = classifyPayment(payment); // "paid" | "registered" | "declined" | "reversed" | "refunded" | "unknown"
+const state = classifyPayment(payment); // "paid" | "registered" | "declined" | "reversed" | "refunded" | "partially_refunded" | "unknown"
 const match = paymentMatchesOrder(payment, { orderNumber: "CMD000123", amount: { value: "806.50", currency: "DZD" } });
 
 if (state === "paid" && match.matches) {
   // Fulfil exactly once (idempotent, transactional). payment.raw holds every gateway field.
 }
 
-// 3. Refunds: experimental until live-verified. Never retried automatically.
+// 3. Refunds: partial and full, live-verified in certification. Never retried automatically.
+//    After any refund SATIM reports OrderStatus 4; depositAmount is what is still captured.
 await satim.refund({ orderId: order.orderId, amount: { value: "200.00", currency: "DZD" } });
 ```
 

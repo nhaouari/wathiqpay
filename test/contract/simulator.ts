@@ -192,7 +192,7 @@ button{display:block;width:100%;margin:.4rem 0;padding:.7rem;font:inherit;border
     if (!o) return { __status: fx.ackUnknownOrderLive.status, __body: fx.ackUnknownOrderLive.bodyText };
     const base = { ErrorCode: "0", ErrorMessage: "Success", OrderStatus: o.status, OrderNumber: o.orderNumber, Amount: Number(o.amount), currency: "012" };
     if (o.status === 2) return { ...fx.ackPaid, ...base, depositAmount: Number(o.amount) };
-    if (o.status === 4) return { ...fx.ackRefunded, ...base };
+    if (o.status === 4) return { ...fx.ackRefunded, ...base, depositAmount: Number(BigInt(o.amount) - o.refunded) };
     if (o.status === 1) return { ...fx.ackApprovedOnePhase, ...base };
     if (o.status === 3) return { ...fx.ackReversed, ...base };
     if (o.status === 6 || o.status === -1) {
@@ -208,7 +208,8 @@ button{display:block;width:100%;margin:.4rem 0;padding:.7rem;font:inherit;border
     const amount = BigInt(form["amount"] ?? "0");
     if (amount <= 0n || o.refunded + amount > BigInt(o.amount)) return { errorCode: 5, errorMessage: "Invalid amount" };
     o.refunded += amount;
-    if (o.refunded === BigInt(o.amount)) o.status = 4;
+    o.status = 4; // live-observed: any refund moves the order to status 4
+    if (o.refunded === BigInt(o.amount)) return fx.refundSuccess;
     return fx.refundSuccess;
   }
 }

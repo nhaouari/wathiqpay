@@ -97,6 +97,7 @@ export function createApp(config: MerchantConfig, deps: { mailer?: Mailer; store
         return failurePage(ctx, order, ack, "declined");
       case "reversed":
       case "refunded":
+      case "partially_refunded":
         return failurePage(ctx, order, ack, "reversed");
       case "review":
         return failurePage(ctx, order, ack, "review");
