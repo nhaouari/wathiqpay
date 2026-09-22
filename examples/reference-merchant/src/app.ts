@@ -78,6 +78,7 @@ export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer;
       ack = await client.acknowledgeTransaction({ orderId: order.satimOrderId, language: order.language });
     } catch (e) {
       log.push(`acknowledge failed for ${order.orderNumber}: ${isWathiqPayError(e) ? `${e.name} ${e.outcome}` : String(e)}`);
+      console.error(`[merchant] acknowledge failed order=${order.orderNumber} ${isWathiqPayError(e) ? `${e.name} (${e.outcome}): ${e.message}` : String(e)}`);
       return { order: (await store.get(order.orderNumber))!, ack: undefined };
     }
     const ackJson = JSON.stringify(ack);
@@ -234,6 +235,8 @@ export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer;
       } catch (e) {
         const note = isWathiqPayError(e) ? `${e.name} (${e.outcome}): ${e.message}` : "unexpected error";
         log.push(`register failed for ${order.orderNumber}: ${note}`);
+        // Operational log (visible in the host's function logs). Never contains credentials.
+        console.error(`[merchant] register failed order=${order.orderNumber} ${note}${e instanceof Error && e.cause ? ` cause=${String((e.cause as Error).message ?? e.cause).slice(0, 200)}` : ""}`);
         await store.markFailed(order.orderNumber, note);
         return html(502, failurePage(await ctx(), (await store.get(order.orderNumber))!, undefined, "failed"));
       }
