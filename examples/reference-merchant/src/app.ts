@@ -18,6 +18,8 @@ import { findProduct } from "./catalog.js";
 import { createChallenge, verify } from "./captcha.js";
 import { buildReceiptPdf } from "./receipt-pdf.js";
 import { createOutboxMailer, isPlausibleEmail, type Mailer } from "./mailer.js";
+import { createSmtpMailer, parseSmtpUrl } from "./smtp.js";
+import { timingSafeEqual } from "node:crypto";
 import { catalogPage, cartPage, checkoutPage, ordersPage, orderDetailPage, successPage, failurePage, receiptPage, receiptRows, notFoundPage, layout, esc, priceCart, type Ctx } from "./views.js";
 
 export interface MerchantApp {
@@ -38,7 +40,7 @@ const PUBLIC_DIR = [join(HERE, "..", "public"), join(HERE, "..", "..", "..", "..
 
 export function createApp(config: MerchantConfig, deps: { mailer?: Mailer; store?: OrderStore } = {}): MerchantApp {
   const store = deps.store ?? new OrderStore(config.dbPath);
-  const mailer = deps.mailer ?? createOutboxMailer(config.outboxDir);
+  const mailer = deps.mailer ?? (config.smtpUrl ? createSmtpMailer(parseSmtpUrl(config.smtpUrl, config.smtpFrom)) : createOutboxMailer(config.outboxDir));
   const log: string[] = [];
   const client = createClient({
     environment: config.mode,
@@ -291,7 +293,16 @@ export function createApp(config: MerchantConfig, deps: { mailer?: Mailer; store
       return html(200, successPage(pageCtx, data, store.items(order.orderNumber), email));
     }
 
-    // ---- operational endpoints (demo only; protect them in a real deployment)
+    // ---- operational endpoints: bearer token required whenever one is configured
+    if (path.startsWith("/admin/")) {
+      if (config.adminToken) {
+        const given = (req.headers.authorization ?? "").replace(/^Bearer\s+/i, "");
+        const ok = given.length === config.adminToken.length && timingSafeEqual(Buffer.from(given), Buffer.from(config.adminToken));
+        if (!ok) return json(res, 401, { error: "unauthorized" });
+      } else if (config.mode !== "simulator") {
+        return json(res, 403, { error: "admin endpoints disabled: MERCHANT_ADMIN_TOKEN not set" });
+      }
+    }
     m = /^\/admin\/orders\/([A-Z0-9]{1,10})$/.exec(path);
     if (m && method === "GET") {
       const order = store.get(m[1]!);
@@ -343,7 +354,7 @@ export function createApp(config: MerchantConfig, deps: { mailer?: Mailer; store
     log,
     reconcile,
     async start(port = config.port) {
-      server.listen(port, "127.0.0.1");
+      server.listen(port, config.host);
       await once(server, "listening");
       const address = server.address();
       return typeof address === "object" && address ? `http://127.0.0.1:${address.port}` : config.publicUrl;

@@ -87,6 +87,19 @@ The next project phase is to implement and demonstrate the module within the exi
 
 The FAQ lists developer eligibility and certificate-validity questions, but its answer did not expand in the browser. Eligibility documents, certificate duration, renewal rules, and version-change rules are therefore not established by this inspection.
 
-The navigation also links an [homologation procedure PDF](https://cibweb.dz/procedure-homologation.pdf); its contents have not yet been reviewed. This document is not a claim that all CIBWeb materials have been exhausted.
+## Homologation procedure PDF (GIE/PHWM/21/3.0), reviewed 22 September 2026
+
+The [procedure PDF](https://cibweb.dz/procedure-homologation.pdf) (9 pages, version 3.0 of 13 January 2021) confirms the portal pages and adds these points:
+
+- **Developer eligibility** (section VI.b): be registered in the commercial register or hold an equivalent document. Nothing else is listed.
+- **Merchant eligibility** (section VI.a): commercial or craft register *and* registration in the national "E-fournisseurs" file at the CNRC (e-commerce code). Every merchant adopting WathiqPay needs both.
+- **Certification runs in five phases** (section VII): application form on CIBWeb; admissibility decision online; remote online tests of the module on the CMI test platform; test report (PV) by the qualifier and certificate issued by GIE Monétique; referencing on CIBWeb. This matches the eight-step web page.
+- **Certificate validity** (section VII "Décision"): the developer receives an *attestation de certification* valid "for a fixed, renewable period". The duration itself is not stated; ask when the certificate is issued.
+- **Licence validation duty** (note after section VII): the certificate holder must validate, in their CIBWeb session, each request from GIE Monétique to authenticate a certificate licence sold or transferred to a merchant. This is the process draft 2 in [outbound-requests.md](outbound-requests.md) asks about for free distributions.
+- **Publication** (section VIII): GIE Monétique publishes granted authorizations, issued certificates, and the contact details of authorized merchants and certified developers on CIBWeb.
+- **Audit** (section IX): GIE Monétique may audit a certified module or an authorized merchant site at any time. Keep the certified release reproducible and the evidence log current.
+- No technical UI or receipt requirements appear in the PDF; those remain on the SATIM portal pages.
+
+The PDF was served with HTTP 500 to plain HTTP clients but downloads normally through a browser session. It is not redistributed in this repository.
 
 The SATIM account previously displayed a testing slot. Together with the authenticated CIBWeb dashboard, this supports that the developer is in the integration-testing phase. The exact linkage of SATIM credentials/terminal to the proposed WathiqPay name and version still needs verification; the visible pages do not establish issuance of the final certificate.

@@ -65,12 +65,12 @@ The accessible certification portal leaves the following points undocumented or 
 CIBWeb explicitly confirms reusable payment-module certification. These questions concern its application to WathiqPay, not whether that pathway exists. See [the verified process](cibweb-process.md).
 
 41. Is a headless npm SDK eligible as the module, and what reference website/UI must accompany its submission?
-42. Which legal/developer profile and supporting documents are required?
+42. Which legal/developer profile and supporting documents are required? *Partly answered by procedure GIE/PHWM/21/3.0: commercial register or equivalent for the developer; merchants also need the CNRC E-fournisseurs registration.*
 43. How are free/open-source module distributions authenticated for merchants in the Type 1 pathway?
 44. What certificate/module/licence identifier should a merchant provide, and how does the developer validate it?
 45. Which code, version, configuration, and UI components are covered by the certificate?
 46. Which updates, merchant customizations, or forks require recertification?
-47. What are the certificate duration, renewal process, and ongoing developer obligations?
+47. What are the certificate duration, renewal process, and ongoing developer obligations? *Procedure GIE/PHWM/21/3.0: the certificate is valid for a fixed renewable period (duration unstated); the holder validates licence requests in CIBWeb; GIE Monétique may audit at any time.*
 48. What evidence and testing remain required during bank production activation for a merchant using the referenced module?
 
 ## Raised by the card-scenario run of 22 September 2026

@@ -24,7 +24,12 @@ const app = createApp(config);
 const origin = await app.start(config.port);
 console.log(`merchant:   ${origin}  (mode=${config.mode}, public URL ${config.publicUrl})`);
 console.log(`outbox:     ${config.outboxDir}`);
-console.log(`reconcile:  curl -X POST ${origin}/admin/reconcile`);
+console.log(`mailer:     ${config.smtpUrl ? "smtp" : "outbox"}`);
+console.log(`reconcile:  curl -X POST ${origin}/admin/reconcile${config.adminToken ? " -H 'Authorization: Bearer $MERCHANT_ADMIN_TOKEN'" : ""}`);
+// Closed-browser recovery runs on a timer as well as on demand.
+setInterval(() => {
+  app.reconcile().then((r) => { if (r.length) console.log(`reconciled ${r.length} order(s)`); }).catch((e) => console.error("reconcile failed", e));
+}, 60_000).unref();
 
 const shutdown = async () => {
   await app.stop();

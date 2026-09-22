@@ -1,0 +1,40 @@
+# Public HTTPS deployment for certification: Caddy terminates TLS with an
+# automatic Let's Encrypt certificate and proxies to the merchant.
+#   cp .env.deploy.example .env.deploy   # then fill it in
+#   docker compose --env-file examples/reference-merchant/deploy/.env.deploy -f examples/reference-merchant/deploy/compose.yml up -d --build
+services:
+  merchant:
+    build:
+      context: ../../..
+      dockerfile: examples/reference-merchant/Dockerfile
+    restart: unless-stopped
+    environment:
+      MERCHANT_MODE: ${MERCHANT_MODE:-certification}
+      MERCHANT_PUBLIC_URL: https://${MERCHANT_DOMAIN}
+      MERCHANT_ADMIN_TOKEN: ${MERCHANT_ADMIN_TOKEN}
+      MERCHANT_CAPTCHA_SECRET: ${MERCHANT_CAPTCHA_SECRET}
+      MERCHANT_RECONCILE_AFTER: ${MERCHANT_RECONCILE_AFTER:-600}
+      SATIM_USERNAME: ${SATIM_USERNAME}
+      SATIM_PASSWORD: ${SATIM_PASSWORD}
+      SATIM_TERMINAL_ID: ${SATIM_TERMINAL_ID}
+      SATIM_BASE_URL: ${SATIM_BASE_URL:-}
+      SMTP_URL: ${SMTP_URL:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+    volumes:
+      - merchant-data:/data
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      MERCHANT_DOMAIN: ${MERCHANT_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+volumes:
+  merchant-data:
+  caddy-data:
+  caddy-config:

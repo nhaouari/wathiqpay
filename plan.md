@@ -120,7 +120,7 @@ Exit: registration, acknowledgement, and refund each have example inputs, expect
 - [ ] Inspect testing-slot expiry and account status when the portal is accessible; record unknown values explicitly. Prepare an extension request if needed. Working account/terminal API access is a gate for E, not offline implementation.
 - [ ] Send-ready draft 2 in [outbound-requests.md](docs/outbound-requests.md) covers SDK eligibility, required reference UI, certificate/version boundary, and open-source merchant licence authentication. Seek scope confirmation during A–C; incorporate the answer before finalizing D's certification application and before E's formal qualification run.
 - [ ] Send-ready draft 1 in [outbound-requests.md](docs/outbound-requests.md) covers POST encoding, acknowledgement semantics, production URL, refund rules, and receipt timestamp source. Only the owner sends external messages; this plan does not authorize sending them. Record replies and evidence as they arrive.
-- [ ] Complete review of the [CIBWeb homologation procedure PDF](https://cibweb.dz/procedure-homologation.pdf) before finalizing D's certification requirements. Access varies: part of it was retrieved earlier through browsing, a later attempt timed out, and a plain HTTP download on 17 September 2026 returned HTTP 500 with a “Web Page Blocked” page. Retry through a browser session (an agent task) and fall back to the owner if that keeps failing; its review remains pending. Continue A–C using the documented portal contract.
+- [x] Complete review of the [CIBWeb homologation procedure PDF](https://cibweb.dz/procedure-homologation.pdf) before finalizing D's certification requirements. Reviewed 22 September 2026 (version GIE/PHWM/21/3.0); findings in [cibweb-process.md](docs/cibweb-process.md). No new technical requirements; adds eligibility, certificate validity, licence-validation duty, and audit rights.
 
 If certification scope remains unanswered, continue the generic simulator demonstration but do not label it an accepted certification submission. Do not invent an answer to an unresolved question to satisfy a milestone.
 
@@ -161,7 +161,7 @@ Exit: the actual installable tarball works in a clean consumer and all offline c
 - [x] Implement printable/PDF/email receipts outside the SDK, using confirmed transaction data.
 - [x] Add merchant-browser tests against the simulator, including success, decline, reversal, unknown outcome, repeated return, and closed-browser scenarios.
 
-Exit: a contributor can run the complete synthetic journey locally (`npm run demo`, `npm run test:merchant`; done 17 September 2026). Qualification readiness additionally requires the accepted submission scope, reviewed homologation requirements, and required receipt/UI data; if these are pending, only the local demonstration is complete.
+Exit: a contributor can run the complete synthetic journey locally (`npm run demo`, `npm run test:merchant`; done 17 September 2026). A Docker Compose deployment with automatic TLS, admin token, and SMTP mailer is in `examples/reference-merchant/deploy/` (22 September 2026); the public host itself is an owner action. Qualification readiness additionally requires the accepted submission scope, reviewed homologation requirements, and required receipt/UI data; if these are pending, only the local demonstration is complete.
 
 ### Milestone E — Test against SATIM certification
 
@@ -254,12 +254,12 @@ Known risks and how the plan handles them:
 | SATIM does not answer priority questions | Continue offline work with labelled assumptions; block only affected live capabilities and production release until critical questions are resolved |
 | Headless npm SDK is not accepted as the certified module | Seek confirmation during A–C; adjust D to the accepted scope before formal qualification in E |
 | README and plan drift on scope | README aligned now; Milestone F checks alignment before release |
-| Homologation PDF adds unreviewed requirements | Access is intermittent; retry via browser, owner as fallback. Review required before D's qualification-ready exit, not before offline SDK work |
+| Homologation PDF adds unreviewed requirements | Reviewed 22 September 2026: no technical additions; eligibility and audit points recorded in cibweb-process.md |
 
 ## Sources and supporting documents
 
 - [CIBWeb module and merchant process](docs/cibweb-process.md), with primary-source links.
-- [CIBWeb homologation procedure PDF](https://cibweb.dz/procedure-homologation.pdf), partially seen via browser, full review pending; plain download returned HTTP 500 on 17 September 2026.
+- [CIBWeb homologation procedure PDF](https://cibweb.dz/procedure-homologation.pdf), GIE/PHWM/21/3.0, reviewed 22 September 2026.
 - [Outbound request drafts](docs/outbound-requests.md), unsent.
 - [Live evidence log](docs/live-evidence.md).
 - [SATIM API and test-card portal](https://certweb.satim.dz/Cert/url), inspected 16 September 2026.

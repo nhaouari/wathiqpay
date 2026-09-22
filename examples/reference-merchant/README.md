@@ -9,7 +9,7 @@ npm run demo             # simulator mode: starts a local SATIM simulator and th
 MERCHANT_MODE=certification MERCHANT_PUBLIC_URL=https://your-host.example npm run demo
 ```
 
-Certification mode reads `SATIM_USERNAME`, `SATIM_PASSWORD`, and `SATIM_TERMINAL_ID` from `.env` and needs a public HTTPS origin for the return URLs.
+Certification mode reads `SATIM_USERNAME`, `SATIM_PASSWORD`, and `SATIM_TERMINAL_ID` from `.env`, requires `MERCHANT_ADMIN_TOKEN`, and needs a public HTTPS origin for the return URLs. See [deploy/README.md](deploy/README.md) for a one-command Docker deployment with automatic TLS.
 
 ## How each certification requirement is met
 
@@ -37,8 +37,8 @@ Certification mode reads `SATIM_USERNAME`, `SATIM_PASSWORD`, and `SATIM_TERMINAL
 
 - Receipt date/time is the merchant's acknowledgement timestamp. SATIM has not confirmed an authoritative gateway timestamp field (open question). Payment method is shown generically as "CIB / Edahabia card" because the card network must not be inferred from the masked PAN.
 - The PDF uses standard Latin fonts; Arabic receipts fall back to French labels in the PDF. Embed a font for production.
-- The mailer writes `.eml` files to `outbox/`. Replace with SMTP in production.
-- `/admin/*` endpoints are unauthenticated demo tooling.
+- Without `SMTP_URL` the mailer writes `.eml` files to `outbox/`. With `SMTP_URL=smtps://user:pass@host:465` receipts are sent through a minimal built-in SMTPS client (AUTH PLAIN).
+- `/admin/*` endpoints require `Authorization: Bearer $MERCHANT_ADMIN_TOKEN`; in simulator mode without a token they stay open for local testing.
 - Sessions are an anonymous `sid` cookie; there is no customer login. Order pages are visible only to the session that placed them.
 - Product photos are openly licensed images from Wikimedia Commons; see `public/images/ATTRIBUTION.md`. Replace them with your own product photography.
 - The store is SQLite via `node:sqlite` (flag `--experimental-sqlite` on Node 22). Any database with a unique constraint and a conditional update works the same way.

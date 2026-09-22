@@ -3,6 +3,13 @@ import { readFileSync } from "node:fs";
 export interface MerchantConfig {
   mode: "simulator" | "certification" | "production";
   port: number;
+  /** Bind address. 127.0.0.1 by default; 0.0.0.0 inside containers behind a TLS proxy. */
+  host: string;
+  /** When set, /admin/* requires `Authorization: Bearer <token>`. Required outside simulator mode. */
+  adminToken: string | undefined;
+  /** smtps://user:pass@host:465 ; when unset the outbox mailer is used. */
+  smtpUrl: string | undefined;
+  smtpFrom: string;
   /** Public origin used to build return/fail URLs (must be https outside simulator mode). */
   publicUrl: string;
   dbPath: string;
@@ -37,9 +44,15 @@ export function configFromEnv(env: NodeJS.ProcessEnv = process.env): MerchantCon
           terminalId: required(env, "SATIM_TERMINAL_ID"),
           baseUrl: env["SATIM_BASE_URL"],
         };
+  const adminToken = env["MERCHANT_ADMIN_TOKEN"] || undefined;
+  if (mode !== "simulator" && !adminToken) throw new Error("MERCHANT_ADMIN_TOKEN is required outside simulator mode");
   return {
     mode,
     port,
+    host: env["MERCHANT_HOST"] ?? "127.0.0.1",
+    adminToken,
+    smtpUrl: env["SMTP_URL"] || undefined,
+    smtpFrom: env["SMTP_FROM"] ?? "receipts@merchant.example",
     publicUrl,
     dbPath: env["MERCHANT_DB"] ?? "examples/reference-merchant/data/merchant.sqlite",
     outboxDir: env["MERCHANT_OUTBOX"] ?? "examples/reference-merchant/outbox",

@@ -66,6 +66,10 @@ describe("reference merchant journey against the simulator", () => {
     const config: MerchantConfig = {
       mode: "simulator",
       port: 0,
+      host: "127.0.0.1",
+      adminToken: undefined,
+      smtpUrl: undefined,
+      smtpFrom: "receipts@merchant.example",
       publicUrl: "http://127.0.0.1:0",
       dbPath: ":memory:",
       outboxDir: "/dev/null",
@@ -296,7 +300,7 @@ describe("reference merchant journey against the simulator", () => {
 
   test("registration failure is reported without taking payment", async () => {
     const broken = createApp(
-      { mode: "simulator", port: 0, publicUrl: origin, dbPath: ":memory:", outboxDir: "/dev/null", captchaSecret: "test", satim: { username: "user", password: "wrong", terminalId: "E0000000000", baseUrl: sim.baseUrl }, reconcileAfterSeconds: 0 },
+      { mode: "simulator", port: 0, host: "127.0.0.1", adminToken: undefined, smtpUrl: undefined, smtpFrom: "x@example.com", publicUrl: origin, dbPath: ":memory:", outboxDir: "/dev/null", captchaSecret: "test", satim: { username: "user", password: "wrong", terminalId: "E0000000000", baseUrl: sim.baseUrl }, reconcileAfterSeconds: 0 },
       { mailer, store: new OrderStore(":memory:") },
     );
     const o = await broken.start(0);
@@ -312,6 +316,40 @@ describe("reference merchant journey against the simulator", () => {
     } finally {
       await broken.stop();
     }
+  });
+});
+
+describe("admin token", () => {
+  test("admin endpoints require the bearer token when one is configured", async () => {
+    const sim = new Simulator();
+    const baseUrl = await sim.start();
+    const app = createApp(
+      { mode: "simulator", port: 0, host: "127.0.0.1", adminToken: "s3cret", smtpUrl: undefined, smtpFrom: "x@example.com", publicUrl: "http://127.0.0.1:0", dbPath: ":memory:", outboxDir: "/dev/null", captchaSecret: "test", satim: { username: "user", password: "secret", terminalId: "E0000000000", baseUrl }, reconcileAfterSeconds: 0 },
+      { store: new OrderStore(":memory:"), mailer: { async send() { return { id: "x" }; } } },
+    );
+    const o = await app.start(0);
+    try {
+      assert.equal((await fetch(`${o}/admin/reconcile`, { method: "POST" })).status, 401);
+      assert.equal((await fetch(`${o}/admin/reconcile`, { method: "POST", headers: { authorization: "Bearer wrong" } })).status, 401);
+      assert.equal((await fetch(`${o}/admin/reconcile`, { method: "POST", headers: { authorization: "Bearer s3cret" } })).status, 200);
+      assert.equal((await fetch(`${o}/healthz`)).status, 200, "health stays public");
+    } finally {
+      await app.stop();
+      await sim.stop();
+    }
+  });
+});
+
+describe("smtp mailer", () => {
+  test("builds a valid multipart message with the PDF attached", async () => {
+    const { buildMime, parseSmtpUrl } = await import("../src/smtp.js");
+    const cfg = parseSmtpUrl("smtps://user%40x.dz:p%3Ass@smtp.example:465", "Shop <r@x.dz>");
+    assert.deepEqual({ host: cfg.host, port: cfg.port, user: cfg.user, pass: cfg.pass }, { host: "smtp.example", port: 465, user: "user@x.dz", pass: "p:ss" });
+    const mime = buildMime(cfg, { to: "c@example.com", subject: "Reçu", text: "hello", pdf: Buffer.from("%PDF-1.4"), pdfName: "r.pdf" }, "id1");
+    assert.match(mime, /^From: Shop <r@x.dz>\r\nTo: c@example.com\r\nSubject: =\?UTF-8\?B\?/);
+    assert.match(mime, /Content-Type: application\/pdf; name="r.pdf"/);
+    assert.ok(mime.includes(Buffer.from("%PDF-1.4").toString("base64")));
+    assert.throws(() => parseSmtpUrl("smtp://u:p@h:25", "x"), /smtps/);
   });
 });
 

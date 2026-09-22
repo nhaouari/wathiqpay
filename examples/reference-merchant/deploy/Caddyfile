@@ -1,0 +1,4 @@
+{$MERCHANT_DOMAIN} {
+	encode gzip
+	reverse_proxy merchant:3000
+}
