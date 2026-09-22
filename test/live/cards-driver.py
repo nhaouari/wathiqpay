@@ -42,8 +42,14 @@ with sync_playwright() as p:
         pg=b.new_page(viewport={"width":1280,"height":900})
         try:
             pg.goto(reg["formUrl"],timeout=60000); pg.wait_for_selector("#pan_visible",timeout=30000); pg.wait_for_timeout(1000)
-            pg.click("#pan_visible"); pg.keyboard.type(card["pan"],delay=15)
-            pg.click("#iCVC"); pg.keyboard.type(card["cvv"],delay=15)
+            def enter(sel, value):
+                for attempt in range(4):
+                    pg.fill(sel, ""); pg.click(sel); pg.keyboard.type(value, delay=110 + 60*attempt)
+                    if pg.evaluate("s=>document.querySelector(s).value", sel).replace(" ","")==value: return True
+                return False
+            rec["entryOk"]=enter("#pan_visible", card["pan"])
+            rec["entryOk"]=rec["entryOk"] and enter("#iCVC", card["cvv"])
+            if not rec["entryOk"]: raise RuntimeError("card fields could not be entered exactly")
             pg.evaluate("([m,y])=>{ $('#month')[0].selectize.setValue(m); $('#year')[0].selectize.setValue(y); }",[mm,yyyy])
             pg.click("#iTEXT"); pg.keyboard.type("TEST HOLDER",delay=15); pg.keyboard.press("Tab"); pg.wait_for_timeout(600)
             rec["fieldCheck"]=pg.evaluate("({cvcLen:document.querySelector('#iCVC').value.length, panOk:document.querySelector('#iPAN').value.slice(-4), m:document.querySelector('#month').value, y:document.querySelector('#year').value, exp:document.querySelector('#expiry').value})")

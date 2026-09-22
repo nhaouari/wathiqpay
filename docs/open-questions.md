@@ -75,7 +75,8 @@ CIBWeb explicitly confirms reusable payment-module certification. These question
 
 ## Raised by the card-scenario run of 22 September 2026
 
-49. Why was the first attempt with each certification card declined as "incorrect CVV" (actionCode 140, respCode AB) while the second attempt gave the expected result?
-50. Which amount triggers the "card limit exceeded" and "terminal/transaction amount limit exceeded" scenarios? Both cards were approved at 50.00 DZD and 999 999.00 DZD.
+49. ~~First-attempt "incorrect CVV" declines~~ Withdrawn 22 September 2026: a test-driver typing artefact, not SATIM behaviour.
+50. Which amount triggers the "card limit exceeded" and "terminal/transaction amount limit exceeded" scenarios? Both cards were approved at 50.00, 1 200.00, and 2 376 000.00 DZD.
 51. The "expired card" test card (12/2022) was approved, and the hosted page's year picker cannot select 2025 for the "card no longer exists" card. Are these cards still current?
 52. Is the two-step flow (card page on `test.satim.dz`, static 3-D Secure password on `test2.satim.dz/acs`) identical in production?
+53. Declines before 3-D Secure (actionCode 2003) and user cancellation return only an English `actionCodeDescription` and no `respCode_desc`. Is localized text available, or a code list the merchant should translate?

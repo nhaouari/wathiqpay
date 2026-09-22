@@ -171,7 +171,7 @@ Exit: a contributor can run the complete synthetic journey locally (`npm run dem
 - [ ] Use explicit opt-in commands and local secrets for live tests, separate from ordinary CI.
 - [x] Run the reference merchant against certification and verify POST form encoding and actual response shapes. Registration and pre-payment acknowledgement verified 22 September 2026; see [live-evidence.md](docs/live-evidence.md).
 - [x] Complete hosted payment entry manually with SATIM test data; exercise CAPTCHA/3-D Secure through the approved flow. Done 22 September 2026 with a browser driver; the hosted flow has a static 3-D Secure password step.
-- [x] Run each applicable scenario in [certification-checklist.md](docs/certification-checklist.md). 11 of 15 card scenarios pass; 4 need SATIM clarification (see live evidence).
+- [x] Run each applicable scenario in [certification-checklist.md](docs/certification-checklist.md). Re-run end to end through the public shop on 22 September 2026: 11 of 15 card scenarios pass; 3 cards are approved by SATIM's test data and 1 cannot be entered (see live evidence).
 - [ ] Verify acknowledgement behavior and abandoned-browser recovery with SATIM's documented guidance; do not assume acknowledgement is a harmless polling endpoint.
 - [x] Verify refunds separately using refundable certification orders and approved amounts. Partial, full, and over-refund verified 22 September 2026.
 - [x] Record SDK commit/version, scenario, observed response shape, expected result, actual result, and evidence reference. See [live-evidence.md](docs/live-evidence.md).

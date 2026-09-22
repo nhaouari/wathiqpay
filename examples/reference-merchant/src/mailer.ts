@@ -46,3 +46,12 @@ export function createOutboxMailer(dir: string): Mailer {
 export function isPlausibleEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) && value.length <= 254;
 }
+
+/** Used where no mail transport exists (serverless without SMTP_URL): fails explicitly. */
+export function createUnconfiguredMailer(): Mailer {
+  return {
+    async send() {
+      throw new Error("no mail transport configured: set SMTP_URL");
+    },
+  };
+}

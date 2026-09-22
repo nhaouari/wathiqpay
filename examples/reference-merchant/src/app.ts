@@ -17,7 +17,7 @@ import { messages, normalizeLang, formatAmount, type Lang } from "./i18n.js";
 import { findProduct } from "./catalog.js";
 import { createChallenge, verify } from "./captcha.js";
 import { buildReceiptPdf } from "./receipt-pdf.js";
-import { createOutboxMailer, isPlausibleEmail, type Mailer } from "./mailer.js";
+import { createOutboxMailer, createUnconfiguredMailer, isPlausibleEmail, type Mailer } from "./mailer.js";
 import { createSmtpMailer, parseSmtpUrl } from "./smtp.js";
 import { timingSafeEqual } from "node:crypto";
 import { catalogPage, cartPage, checkoutPage, ordersPage, orderDetailPage, successPage, failurePage, receiptPage, receiptRows, notFoundPage, layout, esc, priceCart, type Ctx } from "./views.js";
@@ -46,7 +46,13 @@ const PUBLIC_DIR = [
 
 export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer; store?: OrderStore } = {}): Promise<MerchantApp> {
   const store = deps.store ?? (await OrderStore.open({ url: config.dbUrl, authToken: config.dbAuthToken }));
-  const mailer = deps.mailer ?? (config.smtpUrl ? createSmtpMailer(parseSmtpUrl(config.smtpUrl, config.smtpFrom)) : createOutboxMailer(config.outboxDir));
+  const mailer =
+    deps.mailer ??
+    (config.smtpUrl
+      ? createSmtpMailer(parseSmtpUrl(config.smtpUrl, config.smtpFrom))
+      : process.env["VERCEL"]
+        ? createUnconfiguredMailer() // read-only filesystem: no outbox possible
+        : createOutboxMailer(config.outboxDir));
   const log: string[] = [];
   const client = createClient({
     environment: config.mode,
@@ -292,14 +298,20 @@ export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer;
       const pageCtx = { ...(await ctx()), lang: order.language };
       if (!isPlausibleEmail(email)) return html(400, successPage(pageCtx, data, await store.items(order.orderNumber)));
       const t2 = messages[order.language];
-      await mailer.send({
+      const items = await store.items(order.orderNumber);
+      try {
+        await mailer.send({
         to: email,
         subject: `${t2.receipt} ${order.orderNumber}`,
         text: receiptRows(order.language, data).map(([k, v]) => `${k}: ${v}`).join("\n") + `\n${t2.support}\n`,
         pdf: await renderPdf(order.language, data),
         pdfName: `receipt-${order.orderNumber}.pdf`,
-      });
-      return html(200, successPage(pageCtx, data, await store.items(order.orderNumber), email));
+        });
+      } catch (e) {
+        console.error(`[merchant] receipt e-mail failed order=${order.orderNumber}: ${e instanceof Error ? e.message : String(e)}`);
+        return html(502, successPage(pageCtx, data, items, undefined, true));
+      }
+      return html(200, successPage(pageCtx, data, items, email));
     }
 
     // ---- operational endpoints: bearer token required whenever one is configured

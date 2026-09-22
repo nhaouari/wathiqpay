@@ -14,6 +14,54 @@ Sanitized record of every exchange with the real SATIM certification environment
 | 2026-09-22 | 652b156 | Acknowledge an unknown `mdOrder` | `public/acknowledgeTransaction.do` | HTTP 401, `application/json`, body `"Transaction is not found"` (a JSON string) | Documented: `ErrorCode 6` in a JSON object | Divergence; SDK updated to raise `GatewayError http_401` |
 | 2026-09-22 | 652b156 | Open the returned `formUrl` in a browser | hosted page | HTTP 200, title "Paiement", CIB and Algérie Poste branding, merchant name "WATHIQ PAY", amount 50.00 DZD, card form, session timer starting at 10 minutes, help link and 3020 | Hosted page renders | Pass |
 
+## Reference merchant on the public host, 22 September 2026
+
+Shop: `https://wathiqpay-demo2.vercel.app` (Vercel function in `cdg1`, Turso database), certification mode, commit `92f2856`. Each scenario was a real purchase: catalog, cart, checkout with name, phone, terms, and CAPTCHA, SATIM hosted page and 3-D Secure password page, SATIM's redirect back to the shop, backend acknowledgement, result page. Card fields were verified against the card data before each payment.
+
+| Scenario | Result page | Expected | Verdict |
+|---|---|---|---|
+| Valid card | Paiement accepté: Votre paiement a été accepté. | accepted | Pass |
+| Valid credit | Paiement accepté: Votre paiement a été accepté. | accepted | Pass |
+| Temporarily blocked | Paiement refusé: Paiement refusé : carte signalée comme bloquée. Veuillez contacter votre banque. Code d'erreur  | refused | Pass |
+| Lost | Paiement refusé: Paiement refusé : carte signalée comme perdue. Veuillez contacter votre banque. Code d'erreur : | refused | Pass |
+| Stolen | Paiement refusé: Paiement refusé : carte signalée comme volée. Veuillez contacter votre banque. Code d'erreur :  | refused | Pass |
+| Incorrect expiration date entry | Paiement refusé: Paiement refusé : date d'expiration incorrecte. Veuillez vérifier les informations et réessayer | refused | Pass |
+| Card no longer exists on issuer server | Card cannot be entered (no past years in the expiry picker) | refused | Not testable |
+| Card limit exceeded | Paiement accepté: Votre paiement a été accepté. — retried at 2376000.00 DZD: Paiement accepté | refused | Card approved; SATIM test data to confirm |
+| Insufficient card balance | Paiement refusé: Paiement refusé : fonds insuffisants. Veuillez approvisionner votre compte et réessayer. Code d | refused | Pass |
+| Incorrect CVV2 | Paiement refusé: Paiement refusé : code CVV incorrect. Veuillez vérifier les informations et réessayer. Code d'e | refused | Pass |
+| Three incorrect password attempts / password-attempt limit exceeded | Paiement refusé: Card blocked for E-payments. Contact your bank Error code :2003. | refused | Pass |
+| Not authorised for online payment | Paiement refusé: Card blocked for E-payments. Contact your bank Error code :2003. | refused | Pass |
+| Not active/valid for online payment | Paiement refusé: Paiement refusé : carte inactive. Veuillez contacter votre banque. Code d'erreur : AE | refused | Pass |
+| Terminal/transaction amount limit exceeded | Paiement accepté: Votre paiement a été accepté. — retried at 2376000.00 DZD: Paiement accepté | refused | Card approved; SATIM test data to confirm |
+| Expired card | Paiement accepté: Votre paiement a été accepté. | refused | Card approved; SATIM test data to confirm |
+
+| Checklist item | Result |
+|---|---|
+| Checkout shows terms checkbox, CAPTCHA, CIB/Edahabia mark, prominent total | Pass |
+| Missing terms blocks payment before any SATIM call | Pass |
+| Wrong CAPTCHA blocks payment | Pass |
+| Invalid phone blocks payment | Pass |
+| Hosted page opens as an independent top-level page on test.satim.dz | Pass |
+| Success page shows respCode_desc, SATIM order ID, order number, approval code, date/time, amount, method, 3020 | Pass |
+| Printable receipt | Pass |
+| PDF receipt download | Pass |
+| E-mail receipt | Fail |
+| Repeated return shows the same result without re-fulfilment | Pass |
+| Forged orderId in the return URL is rejected | Pass |
+| Order history shows the paid order; another session cannot open it | Pass |
+| Cancel on the hosted page returns to the failure route with SATIM's message | Pass |
+| Arabic: RTL checkout, SATIM page in Arabic (language=ar), Arabic result page | Pass |
+| English: SATIM page in English (language=en) | Pass |
+
+Notes:
+
+- **Correction to the earlier card run.** The "first attempt declined as incorrect CVV" pattern recorded below was caused by the test driver: SATIM's card page reorders digits typed faster than about 100 ms apart into the CVV field. With verified slow entry every scenario gives a stable outcome. Question 49 for SATIM is withdrawn.
+- Three cards are approved although a refusal is expected: card limit exceeded and terminal limit exceeded (also approved at 2 376 000.00 DZD), and expired card (12/2022). This is SATIM test data, not merchant behaviour.
+- The e-mail receipt failed because the demo project has no `SMTP_URL`; the shop now shows a clear message instead of an error page. It passes once SMTP is configured.
+- Declines issued before 3-D Secure (actionCode 2003) and user cancellation carry only an English `actionCodeDescription` from SATIM ("Card blocked for E-payments…", "Operation cancelled by user"), so the French and Arabic result pages show that English sentence. Worth asking SATIM for localized text or a documented code list.
+- Registration from the function's first region (`iad1`) failed intermittently; after moving the function to `cdg1` no registration failed across more than 25 orders.
+
 ## Card scenarios, 22 September 2026 (SDK commit 1249642 plus the partial-refund change)
 
 Each scenario registered a fresh 50.00 DZD order through the SDK (999 999.00 DZD for the terminal-limit scenario), was driven through SATIM's hosted card page and static 3-D Secure password page with `test/live/cards-driver.py`, then acknowledged through the SDK. EC = ErrorCode, OS = OrderStatus, AC = actionCode, RC = params.respCode. PANs are never recorded.
@@ -39,7 +87,7 @@ Each scenario registered a fresh 50.00 DZD order through the SDK (999 999.00 DZD
 Observations from the card runs:
 
 - The hosted flow has two steps: card entry on `test.satim.dz`, then a static 3-D Secure password page on `test2.satim.dz/acs/api/3ds/form`. The browser is finally redirected to `returnUrl` or `failUrl` with `?lang=fr&orderId=<mdOrder>` appended.
-- The first attempt with each card in this session was declined as "incorrect CVV" (AC 140, RC AB) even for valid cards; the second attempt gave the scenario's real outcome. Cause unknown (issuer simulator warm-up or a per-card first-use rule). The SDK is unaffected, but certification runs should expect it.
+- ~~The first attempt with each card was declined as "incorrect CVV"~~ Withdrawn: caused by the driver typing the CVV too fast (see the public-host section above).
 - Accepted payment: EC "0", OS 2, AC 0, RC "00", `approvalCode` and `authorizationResponseId` both present (6 digits), `depositAmount` equals `Amount`.
 - Issuer declines: EC "2", OS 6, `depositAmount` 0, numeric `actionCode`, alphanumeric `respCode` ("37", "41", "43", "51", "AB", "AD", "AE"). Cards blocked before 3-D Secure (AC 2003) return `params` without any `respCode`; the merchant must fall back to `actionCodeDescription`, as the checklist requires.
 - "Card limit exceeded" and "Terminal/transaction amount limit exceeded" were approved on the second attempt at 50.00 DZD and 999 999.00 DZD respectively. Either the scenario needs a specific amount or the test cards changed; to ask SATIM.

@@ -98,6 +98,7 @@ Copy `.env.example` to `.env` for live tests. Never commit credentials or SATIM 
 - [Questions and documentation gaps](docs/open-questions.md)
 - [Send-ready outbound request drafts](docs/outbound-requests.md)
 - [Live evidence log](docs/live-evidence.md)
+- [Operations runbook](docs/runbook.md)
 - [Market, competitor, and legal positioning](docs/market-legal-positioning.md)
 
 ## Scope and legal position
