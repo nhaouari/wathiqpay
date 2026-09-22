@@ -8,7 +8,8 @@
   "include": [
     "src",
     "test",
-    "examples"
+    "examples",
+    "api"
   ],
   "exclude": [
     "test/package"

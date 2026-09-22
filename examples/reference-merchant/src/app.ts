@@ -26,6 +26,8 @@ export interface MerchantApp {
   server: Server;
   store: OrderStore;
   client: WathiqPayClient;
+  /** Raw request handler, usable from a serverless function. */
+  handle(req: IncomingMessage, res: ServerResponse): Promise<void>;
   start(port?: number): Promise<string>;
   stop(): Promise<void>;
   /** Closed-browser recovery: acknowledge orders the customer never returned from. */
@@ -36,10 +38,14 @@ export interface MerchantApp {
 // Compiled output lives under build/, which tsc does not copy assets into,
 // so fall back to the source tree's public/ directory.
 const HERE = dirname(fileURLToPath(import.meta.url));
-const PUBLIC_DIR = [join(HERE, "..", "public"), join(HERE, "..", "..", "..", "..", "examples", "reference-merchant", "public")].find((d) => existsSync(d)) ?? join(HERE, "..", "public");
+const PUBLIC_DIR = [
+  join(HERE, "..", "public"),
+  join(HERE, "..", "..", "..", "..", "examples", "reference-merchant", "public"),
+  join(process.cwd(), "examples", "reference-merchant", "public"), // bundled serverless function
+].find((d) => existsSync(d)) ?? join(HERE, "..", "public");
 
-export function createApp(config: MerchantConfig, deps: { mailer?: Mailer; store?: OrderStore } = {}): MerchantApp {
-  const store = deps.store ?? new OrderStore(config.dbPath);
+export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer; store?: OrderStore } = {}): Promise<MerchantApp> {
+  const store = deps.store ?? (await OrderStore.open({ url: config.dbUrl, authToken: config.dbAuthToken }));
   const mailer = deps.mailer ?? (config.smtpUrl ? createSmtpMailer(parseSmtpUrl(config.smtpUrl, config.smtpFrom)) : createOutboxMailer(config.outboxDir));
   const log: string[] = [];
   const client = createClient({
@@ -72,29 +78,29 @@ export function createApp(config: MerchantConfig, deps: { mailer?: Mailer; store
       ack = await client.acknowledgeTransaction({ orderId: order.satimOrderId, language: order.language });
     } catch (e) {
       log.push(`acknowledge failed for ${order.orderNumber}: ${isWathiqPayError(e) ? `${e.name} ${e.outcome}` : String(e)}`);
-      return { order: store.get(order.orderNumber)!, ack: undefined };
+      return { order: (await store.get(order.orderNumber))!, ack: undefined };
     }
     const ackJson = JSON.stringify(ack);
     const state = classifyPayment(ack);
     const match = paymentMatchesOrder(ack, { orderNumber: order.orderNumber, amount: fromMinorUnits(order.amountMinor) });
     if (state === "paid") {
       if (match.matches) {
-        if (store.fulfilOnce(order.orderNumber, ackJson)) fulfil(order);
+        if (await store.fulfilOnce(order.orderNumber, ackJson)) fulfil(order);
       } else {
-        store.recordAcknowledgement(order.orderNumber, "review", ackJson, `mismatch: ${match.mismatches.join(",")}`);
+        await store.recordAcknowledgement(order.orderNumber, "review", ackJson, `mismatch: ${match.mismatches.join(",")}`);
       }
     } else if (state === "registered" || state === "unknown") {
-      store.recordAcknowledgement(order.orderNumber, state === "registered" ? "registered" : "unknown", ackJson);
+      await store.recordAcknowledgement(order.orderNumber, state === "registered" ? "registered" : "unknown", ackJson);
     } else {
-      store.recordAcknowledgement(order.orderNumber, state, ackJson);
+      await store.recordAcknowledgement(order.orderNumber, state, ackJson);
     }
-    return { order: store.get(order.orderNumber)!, ack };
+    return { order: (await store.get(order.orderNumber))!, ack };
   }
 
-  function renderOutcome(ctx: Ctx, order: OrderRow, ack: AcknowledgeResult | undefined): string {
+  async function renderOutcome(ctx: Ctx, order: OrderRow, ack: AcknowledgeResult | undefined): Promise<string> {
     switch (order.state) {
       case "paid":
-        return successPage(ctx, { order, ack: ack! }, store.items(order.orderNumber));
+        return successPage(ctx, { order, ack: ack! }, await store.items(order.orderNumber));
       case "declined":
         return failurePage(ctx, order, ack, "declined");
       case "reversed":
@@ -119,10 +125,10 @@ export function createApp(config: MerchantConfig, deps: { mailer?: Mailer; store
     let sid = cookies["sid"] && /^[a-f0-9]{32}$/.test(cookies["sid"]) ? cookies["sid"] : undefined;
     if (!sid) {
       sid = randomBytes(16).toString("hex");
-      setCookies.push(`sid=${sid}; Path=/; HttpOnly; SameSite=Lax`);
+      setCookies.push(`sid=${sid}; Path=/; HttpOnly; SameSite=Lax${config.publicUrl.startsWith("https://") ? "; Secure" : ""}`);
     }
     const session = sid;
-    const ctx = (): Ctx => ({ lang, cartCount: store.getCart(session).reduce((n, l) => n + l.quantity, 0), current: url.pathname + url.search });
+    const ctx = async (): Promise<Ctx> => ({ lang, cartCount: (await store.getCart(session)).reduce((n, l) => n + l.quantity, 0), current: url.pathname + url.search });
     const html = (status: number, body: string, extra: Record<string, string> = {}) => {
       res.writeHead(status, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "set-cookie": setCookies, ...extra });
       res.end(body);
@@ -152,38 +158,38 @@ export function createApp(config: MerchantConfig, deps: { mailer?: Mailer; store
     let m = /^\/lang\/(\w+)$/.exec(path);
     if (m) {
       const next = url.searchParams.get("next") ?? "/";
-      setCookies.push(`lang=${normalizeLang(m[1])}; Path=/; SameSite=Lax`);
+      setCookies.push(`lang=${normalizeLang(m[1])}; Path=/; SameSite=Lax${config.publicUrl.startsWith("https://") ? "; Secure" : ""}`);
       return redirect(next.startsWith("/") ? next : "/");
     }
 
     // ---- catalog and cart ------------------------------------------------
-    if (path === "/" && method === "GET") return html(200, catalogPage(ctx(), url.searchParams.has("added") ? t.addedToCart : undefined));
+    if (path === "/" && method === "GET") return html(200, catalogPage(await ctx(), url.searchParams.has("added") ? t.addedToCart : undefined));
 
     if (path === "/cart/add" && method === "POST") {
       const form = await readForm(req);
       const product = findProduct(form.get("product") ?? "");
-      if (!product) return html(404, notFoundPage(ctx()));
-      store.addToCart(session, product.id, clampQty(form.get("quantity")));
+      if (!product) return html(404, notFoundPage(await ctx()));
+      await store.addToCart(session, product.id, clampQty(form.get("quantity")));
       return redirect("/?added=1");
     }
     if (path === "/cart/update" && method === "POST") {
       const form = await readForm(req);
       const product = findProduct(form.get("product") ?? "");
-      if (product) store.setCartLine(session, product.id, clampQty(form.get("quantity"), 0));
+      if (product) await store.setCartLine(session, product.id, clampQty(form.get("quantity"), 0));
       return redirect("/cart");
     }
-    if (path === "/cart" && method === "GET") return html(200, cartPage(ctx(), priceCart(store.getCart(session))));
+    if (path === "/cart" && method === "GET") return html(200, cartPage(await ctx(), priceCart(await store.getCart(session))));
 
     // ---- checkout ---------------------------------------------------------
     if (path === "/checkout" && method === "GET") {
-      const cart = priceCart(store.getCart(session));
+      const cart = priceCart(await store.getCart(session));
       if (cart.lines.length === 0) return redirect("/cart");
-      return html(200, checkoutPage(ctx(), cart, createChallenge(config.captchaSecret)));
+      return html(200, checkoutPage(await ctx(), cart, createChallenge(config.captchaSecret)));
     }
 
     if (path === "/checkout" && method === "POST") {
       const form = await readForm(req);
-      const cart = priceCart(store.getCart(session));
+      const cart = priceCart(await store.getCart(session));
       if (cart.lines.length === 0) return redirect("/cart");
       const customer = {
         name: (form.get("name") ?? "").trim().replace(/\s+/g, " ").slice(0, 80),
@@ -191,7 +197,7 @@ export function createApp(config: MerchantConfig, deps: { mailer?: Mailer; store
         address: (form.get("address") ?? "").trim().slice(0, 200),
         email: (form.get("email") ?? "").trim(),
       };
-      const rerender = (error: string) => html(400, checkoutPage(ctx(), cart, createChallenge(config.captchaSecret), { error, customer }));
+      const rerender = async (error: string) => html(400, checkoutPage(await ctx(), cart, createChallenge(config.captchaSecret), { error, customer }));
       if (customer.name.length < 2) return rerender(t.nameRequired);
       const phone = normalizeAlgerianPhone(customer.phone);
       if (!phone) return rerender(t.phoneInvalid);
@@ -201,7 +207,7 @@ export function createApp(config: MerchantConfig, deps: { mailer?: Mailer; store
       const email = customer.email;
 
       // 1. Persist first. 2. Register. 3. Store orderId. 4. Redirect to formUrl only.
-      const order = store.createPending({
+      const order = await store.createPending({
         amountMinor: cart.totalMinor,
         description: cart.lines.map((l) => `${l.product.name[lang]} x${l.quantity}`).join(", ").slice(0, 512),
         language: lang,
@@ -222,14 +228,14 @@ export function createApp(config: MerchantConfig, deps: { mailer?: Mailer; store
           language: lang,
           metadata: { udf1: order.orderNumber },
         });
-        store.markRegistered(order.orderNumber, reg.orderId);
-        store.clearCart(session);
+        await store.markRegistered(order.orderNumber, reg.orderId);
+        await store.clearCart(session);
         return redirect(reg.formUrl);
       } catch (e) {
         const note = isWathiqPayError(e) ? `${e.name} (${e.outcome}): ${e.message}` : "unexpected error";
         log.push(`register failed for ${order.orderNumber}: ${note}`);
-        store.markFailed(order.orderNumber, note);
-        return html(502, failurePage(ctx(), store.get(order.orderNumber)!, undefined, "failed"));
+        await store.markFailed(order.orderNumber, note);
+        return html(502, failurePage(await ctx(), (await store.get(order.orderNumber))!, undefined, "failed"));
       }
     }
 
@@ -238,36 +244,36 @@ export function createApp(config: MerchantConfig, deps: { mailer?: Mailer; store
     // lookup key, never a payment claim. SATIM's appended orderId is cross-checked.
     if ((path === "/payment/return" || path === "/payment/fail") && method === "GET") {
       const ref = url.searchParams.get("ref") ?? "";
-      const order = store.get(ref);
-      if (!order) return html(404, notFoundPage(ctx()));
+      const order = await store.get(ref);
+      if (!order) return html(404, notFoundPage(await ctx()));
       const claimed = url.searchParams.get("orderId");
       if (claimed && order.satimOrderId && claimed !== order.satimOrderId) {
         log.push(`orderId mismatch on return for ${ref}`);
-        return html(404, notFoundPage(ctx()));
+        return html(404, notFoundPage(await ctx()));
       }
       const settled = await settle(order);
       // Language consistency with the checkout that started it, even without the cookie.
-      return html(200, renderOutcome({ ...ctx(), lang: settled.order.language }, settled.order, settled.ack));
+      return html(200, await renderOutcome({ ...(await ctx()), lang: settled.order.language }, settled.order, settled.ack));
     }
 
     // ---- orders, receipts -------------------------------------------------
-    if (path === "/orders" && method === "GET") return html(200, ordersPage(ctx(), store.ordersForSession(session)));
+    if (path === "/orders" && method === "GET") return html(200, ordersPage(await ctx(), await store.ordersForSession(session)));
 
     m = /^\/orders\/([A-Z0-9]{1,10})$/.exec(path);
     if (m && method === "GET") {
-      const order = store.get(m[1]!);
-      if (!order || order.sessionId !== session) return html(404, notFoundPage(ctx()));
+      const order = await store.get(m[1]!);
+      if (!order || order.sessionId !== session) return html(404, notFoundPage(await ctx()));
       const ack = order.ackJson ? (JSON.parse(order.ackJson) as AcknowledgeResult) : undefined;
-      return html(200, orderDetailPage(ctx(), order, store.items(order.orderNumber), ack));
+      return html(200, orderDetailPage(await ctx(), order, await store.items(order.orderNumber), ack));
     }
 
     m = /^\/orders\/([A-Z0-9]{1,10})\/receipt(\.pdf)?$/.exec(path);
     if (m && method === "GET") {
-      const order = store.get(m[1]!);
-      if (!order || order.state !== "paid" || !order.ackJson) return html(404, notFoundPage(ctx()));
+      const order = await store.get(m[1]!);
+      if (!order || order.state !== "paid" || !order.ackJson) return html(404, notFoundPage(await ctx()));
       const data = { order, ack: JSON.parse(order.ackJson) as AcknowledgeResult };
-      if (!m[2]) return html(200, receiptPage({ ...ctx(), lang: order.language }, data, store.items(order.orderNumber)));
-      const pdf = renderPdf(order.language, data);
+      if (!m[2]) return html(200, receiptPage({ ...(await ctx()), lang: order.language }, data, await store.items(order.orderNumber)));
+      const pdf = await renderPdf(order.language, data);
       res.writeHead(200, { "content-type": "application/pdf", "content-disposition": `attachment; filename="receipt-${order.orderNumber}.pdf"`, "cache-control": "no-store" });
       res.end(pdf);
       return;
@@ -275,29 +281,30 @@ export function createApp(config: MerchantConfig, deps: { mailer?: Mailer; store
 
     m = /^\/orders\/([A-Z0-9]{1,10})\/receipt\/email$/.exec(path);
     if (m && method === "POST") {
-      const order = store.get(m[1]!);
-      if (!order || order.state !== "paid" || !order.ackJson) return html(404, notFoundPage(ctx()));
+      const order = await store.get(m[1]!);
+      if (!order || order.state !== "paid" || !order.ackJson) return html(404, notFoundPage(await ctx()));
       const form = await readForm(req);
       const email = (form.get("email") ?? "").trim();
       const data = { order, ack: JSON.parse(order.ackJson) as AcknowledgeResult };
-      const pageCtx = { ...ctx(), lang: order.language };
-      if (!isPlausibleEmail(email)) return html(400, successPage(pageCtx, data, store.items(order.orderNumber)));
+      const pageCtx = { ...(await ctx()), lang: order.language };
+      if (!isPlausibleEmail(email)) return html(400, successPage(pageCtx, data, await store.items(order.orderNumber)));
       const t2 = messages[order.language];
       await mailer.send({
         to: email,
         subject: `${t2.receipt} ${order.orderNumber}`,
         text: receiptRows(order.language, data).map(([k, v]) => `${k}: ${v}`).join("\n") + `\n${t2.support}\n`,
-        pdf: renderPdf(order.language, data),
+        pdf: await renderPdf(order.language, data),
         pdfName: `receipt-${order.orderNumber}.pdf`,
       });
-      return html(200, successPage(pageCtx, data, store.items(order.orderNumber), email));
+      return html(200, successPage(pageCtx, data, await store.items(order.orderNumber), email));
     }
 
     // ---- operational endpoints: bearer token required whenever one is configured
     if (path.startsWith("/admin/")) {
       if (config.adminToken) {
         const given = (req.headers.authorization ?? "").replace(/^Bearer\s+/i, "");
-        const ok = given.length === config.adminToken.length && timingSafeEqual(Buffer.from(given), Buffer.from(config.adminToken));
+        const accepted = [config.adminToken, process.env["CRON_SECRET"]].filter((t): t is string => !!t);
+        const ok = accepted.some((t) => given.length === t.length && timingSafeEqual(Buffer.from(given), Buffer.from(t)));
         if (!ok) return json(res, 401, { error: "unauthorized" });
       } else if (config.mode !== "simulator") {
         return json(res, 403, { error: "admin endpoints disabled: MERCHANT_ADMIN_TOKEN not set" });
@@ -305,33 +312,33 @@ export function createApp(config: MerchantConfig, deps: { mailer?: Mailer; store
     }
     m = /^\/admin\/orders\/([A-Z0-9]{1,10})$/.exec(path);
     if (m && method === "GET") {
-      const order = store.get(m[1]!);
+      const order = await store.get(m[1]!);
       if (!order) return json(res, 404, { error: "not found" });
-      return json(res, 200, { ...redact(order), items: store.items(order.orderNumber), fulfilments: store.fulfilmentCount(order.orderNumber) });
+      return json(res, 200, { ...redact(order), items: await store.items(order.orderNumber), fulfilments: await store.fulfilmentCount(order.orderNumber) });
     }
-    if (path === "/admin/reconcile" && method === "POST") {
+    if (path === "/admin/reconcile" && (method === "POST" || method === "GET")) {
       const olderThan = Number(url.searchParams.get("olderThan") ?? config.reconcileAfterSeconds);
       return json(res, 200, await reconcile(olderThan));
     }
     if (path === "/healthz") return json(res, 200, { ok: true, mode: config.mode });
 
-    return html(404, layout(ctx(), "404", `<h1>404</h1><p>${esc(t.notFound)}</p>`));
+    return html(404, layout(await ctx(), "404", `<h1>404</h1><p>${esc(t.notFound)}</p>`));
   }
 
   async function reconcile(olderThanSeconds = config.reconcileAfterSeconds) {
     const results: Array<{ orderNumber: string; state: OrderState }> = [];
-    for (const order of store.staleRegistered(olderThanSeconds)) {
+    for (const order of await store.staleRegistered(olderThanSeconds)) {
       const { order: after } = await settle(order);
       results.push({ orderNumber: after.orderNumber, state: after.state });
     }
     return results;
   }
 
-  function renderPdf(lang: Lang, data: { order: OrderRow; ack: AcknowledgeResult }): Buffer {
+  async function renderPdf(lang: Lang, data: { order: OrderRow; ack: AcknowledgeResult }): Promise<Buffer> {
     // Standard PDF fonts cannot render Arabic; fall back to French labels for AR.
     const pdfLang: Lang = lang === "AR" ? "FR" : lang;
     const t = messages[pdfLang];
-    const items = store.items(data.order.orderNumber).map((it) => ({ label: `${it.quantity} ×`, value: `${it.name}  ${formatAmount((BigInt(it.unitMinor) * BigInt(it.quantity)).toString(), pdfLang)}` }));
+    const items = (await store.items(data.order.orderNumber)).map((it) => ({ label: `${it.quantity} ×`, value: `${it.name}  ${formatAmount((BigInt(it.unitMinor) * BigInt(it.quantity)).toString(), pdfLang)}` }));
     return buildReceiptPdf(
       t.receipt,
       [...receiptRows(pdfLang, data).map(([label, value]) => ({ label, value })), ...items],
@@ -353,6 +360,7 @@ export function createApp(config: MerchantConfig, deps: { mailer?: Mailer; store
     client,
     log,
     reconcile,
+    handle,
     async start(port = config.port) {
       server.listen(port, config.host);
       await once(server, "listening");
@@ -383,6 +391,17 @@ function clampQty(v: string | null | undefined, min = 1): number {
 }
 
 async function readForm(req: IncomingMessage): Promise<URLSearchParams> {
+  // Vercel's Node runtime consumes the stream and exposes the parsed body.
+  const pre = (req as IncomingMessage & { body?: unknown }).body;
+  if (pre !== undefined && pre !== null) {
+    if (typeof pre === "string") return new URLSearchParams(pre);
+    if (Buffer.isBuffer(pre)) return new URLSearchParams(pre.toString("utf8"));
+    if (typeof pre === "object") {
+      const params = new URLSearchParams();
+      for (const [k, v] of Object.entries(pre as Record<string, unknown>)) params.set(k, Array.isArray(v) ? String(v[0] ?? "") : String(v ?? ""));
+      return params;
+    }
+  }
   const chunks: Buffer[] = [];
   let size = 0;
   for await (const c of req) {

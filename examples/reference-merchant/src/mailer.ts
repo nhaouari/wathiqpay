@@ -11,9 +11,9 @@ export interface Mailer {
 }
 
 export function createOutboxMailer(dir: string): Mailer {
-  mkdirSync(dir, { recursive: true });
   return {
     async send({ to, subject, text, pdf, pdfName }) {
+      mkdirSync(dir, { recursive: true }); // lazily: the directory may be read-only or absent until first use
       const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       const boundary = `b${id}`;
       const eml = [

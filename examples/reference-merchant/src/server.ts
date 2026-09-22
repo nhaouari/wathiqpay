@@ -20,7 +20,7 @@ if (config.mode !== "simulator" && !config.publicUrl.startsWith("https://")) {
   process.exit(1);
 }
 
-const app = createApp(config);
+const app = await createApp(config);
 const origin = await app.start(config.port);
 console.log(`merchant:   ${origin}  (mode=${config.mode}, public URL ${config.publicUrl})`);
 console.log(`outbox:     ${config.outboxDir}`);

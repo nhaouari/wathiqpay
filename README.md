@@ -84,7 +84,8 @@ Copy `.env.example` to `.env` for live tests. Never commit credentials or SATIM 
 |---|---|
 | `src/` | The SDK (published as the npm package) |
 | `test/` | Unit, contract, packaging, and opt-in live tests |
-| `examples/reference-merchant/` | The demo shop used for certification, with its Docker deployment |
+| `examples/reference-merchant/` | The demo shop used for certification, with Docker and Vercel deployments |
+| `api/`, `vercel.json` | Vercel entry point for the demo shop (`demo.wathiqpay.com`) |
 | `docs/` | Integration reference, checklists, evidence log, process notes |
 | `site/` | The public landing page at www.wathiqpay.com (Vite + React, deployed by Vercel with root directory `site`) |
 

@@ -71,13 +71,13 @@ describe("reference merchant journey against the simulator", () => {
       smtpUrl: undefined,
       smtpFrom: "receipts@merchant.example",
       publicUrl: "http://127.0.0.1:0",
-      dbPath: ":memory:",
+      dbUrl: ":memory:", dbAuthToken: undefined,
       outboxDir: "/dev/null",
       captchaSecret: "test",
       satim: { username: "user", password: "secret", terminalId: "E0000000000", baseUrl },
       reconcileAfterSeconds: 0,
     };
-    app = createApp(config, { mailer, store: new OrderStore(":memory:") });
+    app = await createApp(config, { mailer, store: await OrderStore.open({ url: ":memory:" }) });
     origin = await app.start(0);
     config.publicUrl = origin;
   });
@@ -194,7 +194,7 @@ describe("reference merchant journey against the simulator", () => {
     const again = await b.go(`${origin}/payment/return?ref=${ref}&orderId=${orderId}`);
     assert.match(again.body, /Paiement accepté/);
     assert.equal(sim.requests.filter((r) => r.path.includes("acknowledge")).length, acksBefore);
-    assert.equal(app.store.fulfilmentCount(ref), 1);
+    assert.equal(await app.store.fulfilmentCount(ref), 1);
 
     // Printable receipt, PDF, and email.
     const printable = await b.go(`${origin}/orders/${ref}/receipt`);
@@ -222,7 +222,7 @@ describe("reference merchant journey against the simulator", () => {
     assert.match(result.body, /3020/);
     const rec = await (await fetch(`${origin}/admin/orders/${ref}`)).json() as { state: string };
     assert.equal(rec.state, "declined");
-    assert.equal(app.store.fulfilmentCount(ref), 0);
+    assert.equal(await app.store.fulfilmentCount(ref), 0);
   });
 
   test("reversed transaction shows the required rejection message", async () => {
@@ -241,7 +241,7 @@ describe("reference merchant journey against the simulator", () => {
     assert.match(result.body, /en cours de vérification/);
     const rec = await (await fetch(`${origin}/admin/orders/${ref}`)).json() as { state: string };
     assert.equal(rec.state, "unknown");
-    assert.equal(app.store.fulfilmentCount(ref), 0);
+    assert.equal(await app.store.fulfilmentCount(ref), 0);
   });
 
   test("query-string claims are not trusted: foreign orderId or unknown ref yields 404, no fulfilment", async () => {
@@ -252,7 +252,7 @@ describe("reference merchant journey against the simulator", () => {
     assert.equal(forged.status, 404);
     const unknown = await b.go(`${origin}/payment/return?ref=WNOPE12345`);
     assert.equal(unknown.status, 404);
-    assert.equal(app.store.fulfilmentCount(ref), 0);
+    assert.equal(await app.store.fulfilmentCount(ref), 0);
   });
 
   test("concurrent returns for one paid order fulfil exactly once", async () => {
@@ -262,7 +262,7 @@ describe("reference merchant journey against the simulator", () => {
     sim.pay(orderId);
     const pages = await Promise.all(Array.from({ length: 6 }, () => new Browser().go(`${origin}/payment/return?ref=${ref}`)));
     for (const p of pages) assert.match(p.body, /Paiement accepté/);
-    assert.equal(app.store.fulfilmentCount(ref), 1);
+    assert.equal(await app.store.fulfilmentCount(ref), 1);
     assert.equal(app.log.filter((l) => l === `fulfilled ${ref}`).length, 1);
   });
 
@@ -280,8 +280,8 @@ describe("reference merchant journey against the simulator", () => {
     const byRef = Object.fromEntries(summary.map((s) => [s.orderNumber, s.state]));
     assert.equal(byRef[paid.ref], "paid");
     assert.equal(byRef[unpaid.ref], "registered");
-    assert.equal(app.store.fulfilmentCount(paid.ref), 1);
-    assert.equal(app.store.fulfilmentCount(unpaid.ref), 0);
+    assert.equal(await app.store.fulfilmentCount(paid.ref), 1);
+    assert.equal(await app.store.fulfilmentCount(unpaid.ref), 0);
   });
 
   test("language is consistent from checkout through SATIM request to result page", async () => {
@@ -299,9 +299,9 @@ describe("reference merchant journey against the simulator", () => {
   });
 
   test("registration failure is reported without taking payment", async () => {
-    const broken = createApp(
-      { mode: "simulator", port: 0, host: "127.0.0.1", adminToken: undefined, smtpUrl: undefined, smtpFrom: "x@example.com", publicUrl: origin, dbPath: ":memory:", outboxDir: "/dev/null", captchaSecret: "test", satim: { username: "user", password: "wrong", terminalId: "E0000000000", baseUrl: sim.baseUrl }, reconcileAfterSeconds: 0 },
-      { mailer, store: new OrderStore(":memory:") },
+    const broken = await createApp(
+      { mode: "simulator", port: 0, host: "127.0.0.1", adminToken: undefined, smtpUrl: undefined, smtpFrom: "x@example.com", publicUrl: origin, dbUrl: ":memory:", dbAuthToken: undefined, outboxDir: "/dev/null", captchaSecret: "test", satim: { username: "user", password: "wrong", terminalId: "E0000000000", baseUrl: sim.baseUrl }, reconcileAfterSeconds: 0 },
+      { mailer, store: await OrderStore.open({ url: ":memory:" }) },
     );
     const o = await broken.start(0);
     try {
@@ -323,9 +323,9 @@ describe("admin token", () => {
   test("admin endpoints require the bearer token when one is configured", async () => {
     const sim = new Simulator();
     const baseUrl = await sim.start();
-    const app = createApp(
-      { mode: "simulator", port: 0, host: "127.0.0.1", adminToken: "s3cret", smtpUrl: undefined, smtpFrom: "x@example.com", publicUrl: "http://127.0.0.1:0", dbPath: ":memory:", outboxDir: "/dev/null", captchaSecret: "test", satim: { username: "user", password: "secret", terminalId: "E0000000000", baseUrl }, reconcileAfterSeconds: 0 },
-      { store: new OrderStore(":memory:"), mailer: { async send() { return { id: "x" }; } } },
+    const app = await createApp(
+      { mode: "simulator", port: 0, host: "127.0.0.1", adminToken: "s3cret", smtpUrl: undefined, smtpFrom: "x@example.com", publicUrl: "http://127.0.0.1:0", dbUrl: ":memory:", dbAuthToken: undefined, outboxDir: "/dev/null", captchaSecret: "test", satim: { username: "user", password: "secret", terminalId: "E0000000000", baseUrl }, reconcileAfterSeconds: 0 },
+      { store: await OrderStore.open({ url: ":memory:" }), mailer: { async send() { return { id: "x" }; } } },
     );
     const o = await app.start(0);
     try {
@@ -354,8 +354,8 @@ describe("smtp mailer", () => {
 });
 
 describe("order store", () => {
-  test("order numbers are 10 alphanumeric characters and unique", () => {
-    const store = new OrderStore(":memory:");
+  test("order numbers are 10 alphanumeric characters and unique", async () => {
+    const store = await OrderStore.open({ url: ":memory:" });
     const seen = new Set<string>();
     for (let i = 0; i < 2000; i += 1) {
       const n = generateOrderNumber();
@@ -363,14 +363,14 @@ describe("order store", () => {
       seen.add(n);
     }
     assert.equal(seen.size, 2000);
-    const a = store.createPending({ amountMinor: "5000", description: "x", language: "FR" });
-    const b = store.createPending({ amountMinor: "5000", description: "x", language: "FR" });
+    const a = await store.createPending({ amountMinor: "5000", description: "x", language: "FR" });
+    const b = await store.createPending({ amountMinor: "5000", description: "x", language: "FR" });
     assert.notEqual(a.orderNumber, b.orderNumber);
-    store.markRegistered(a.orderNumber, "SIM1");
-    assert.throws(() => store.markRegistered(b.orderNumber, "SIM1"), /UNIQUE/);
-    assert.equal(store.fulfilOnce(a.orderNumber, "{}"), true);
-    assert.equal(store.fulfilOnce(a.orderNumber, "{}"), false);
-    assert.equal(store.fulfilmentCount(a.orderNumber), 1);
+    await store.markRegistered(a.orderNumber, "SIM1");
+    await assert.rejects(store.markRegistered(b.orderNumber, "SIM1"), /UNIQUE/);
+    assert.equal(await store.fulfilOnce(a.orderNumber, "{}"), true);
+    assert.equal(await store.fulfilOnce(a.orderNumber, "{}"), false);
+    assert.equal(await store.fulfilmentCount(a.orderNumber), 1);
     store.close();
   });
 });

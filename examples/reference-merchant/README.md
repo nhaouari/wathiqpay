@@ -9,7 +9,7 @@ npm run demo             # simulator mode: starts a local SATIM simulator and th
 MERCHANT_MODE=certification MERCHANT_PUBLIC_URL=https://your-host.example npm run demo
 ```
 
-Certification mode reads `SATIM_USERNAME`, `SATIM_PASSWORD`, and `SATIM_TERMINAL_ID` from `.env`, requires `MERCHANT_ADMIN_TOKEN`, and needs a public HTTPS origin for the return URLs. See [deploy/README.md](deploy/README.md) for a one-command Docker deployment with automatic TLS.
+Certification mode reads `SATIM_USERNAME`, `SATIM_PASSWORD`, and `SATIM_TERMINAL_ID` from `.env`, requires `MERCHANT_ADMIN_TOKEN`, and needs a public HTTPS origin for the return URLs. See [deploy/README.md](deploy/README.md) for a one-command Docker deployment with automatic TLS, or [deploy/vercel.md](deploy/vercel.md) to host it on Vercel with a Turso database.
 
 ## How each certification requirement is met
 
@@ -41,7 +41,7 @@ Certification mode reads `SATIM_USERNAME`, `SATIM_PASSWORD`, and `SATIM_TERMINAL
 - `/admin/*` endpoints require `Authorization: Bearer $MERCHANT_ADMIN_TOKEN`; in simulator mode without a token they stay open for local testing.
 - Sessions are an anonymous `sid` cookie; there is no customer login. Order pages are visible only to the session that placed them.
 - Product photos are openly licensed images from Wikimedia Commons; see `public/images/ATTRIBUTION.md`. Replace them with your own product photography.
-- The store is SQLite via `node:sqlite` (flag `--experimental-sqlite` on Node 22). Any database with a unique constraint and a conditional update works the same way.
+- The store is libSQL (`@libsql/client`): a local `file:` database for the demo and Docker, `:memory:` in tests, or a hosted Turso database on Vercel. Any database with a unique constraint and a conditional update works the same way.
 
 ## Tests
 

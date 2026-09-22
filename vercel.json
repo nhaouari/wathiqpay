@@ -1,0 +1,8 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "npm run build",
+  "outputDirectory": "examples/reference-merchant/public",
+  "rewrites": [{ "source": "/(.*)", "destination": "/api/merchant" }],
+  "functions": { "api/merchant.ts": { "maxDuration": 30 } },
+  "crons": [{ "path": "/admin/reconcile", "schedule": "0 */6 * * *" }]
+}

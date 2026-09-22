@@ -12,7 +12,9 @@ export interface MerchantConfig {
   smtpFrom: string;
   /** Public origin used to build return/fail URLs (must be https outside simulator mode). */
   publicUrl: string;
-  dbPath: string;
+  /** libSQL URL: file:…, :memory:, or libsql://… with dbAuthToken (Turso). */
+  dbUrl: string;
+  dbAuthToken: string | undefined;
   outboxDir: string;
   captchaSecret: string;
   satim: { username: string; password: string; terminalId: string; baseUrl: string | undefined };
@@ -54,7 +56,8 @@ export function configFromEnv(env: NodeJS.ProcessEnv = process.env): MerchantCon
     smtpUrl: env["SMTP_URL"] || undefined,
     smtpFrom: env["SMTP_FROM"] ?? "receipts@merchant.example",
     publicUrl,
-    dbPath: env["MERCHANT_DB"] ?? "examples/reference-merchant/data/merchant.sqlite",
+    dbUrl: env["MERCHANT_DB_URL"] ?? (env["MERCHANT_DB"] ? `file:${env["MERCHANT_DB"]}` : "file:examples/reference-merchant/data/merchant.sqlite"),
+    dbAuthToken: env["MERCHANT_DB_AUTH_TOKEN"] || env["TURSO_AUTH_TOKEN"] || undefined,
     outboxDir: env["MERCHANT_OUTBOX"] ?? "examples/reference-merchant/outbox",
     captchaSecret: env["MERCHANT_CAPTCHA_SECRET"] ?? "dev-only-change-me",
     satim,

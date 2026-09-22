@@ -12,8 +12,9 @@ RUN npm run build:test
 FROM node:24-alpine
 WORKDIR /app
 ENV NODE_ENV=production MERCHANT_HOST=0.0.0.0 MERCHANT_PORT=3000 \
-    MERCHANT_DB=/data/merchant.sqlite MERCHANT_OUTBOX=/data/outbox
+    MERCHANT_DB_URL=file:/data/merchant.sqlite MERCHANT_OUTBOX=/data/outbox
 COPY --from=build /app/build ./build
+COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/examples/reference-merchant/public ./examples/reference-merchant/public
 COPY package.json ./
 RUN mkdir -p /data && chown node:node /data
@@ -21,4 +22,4 @@ USER node
 VOLUME ["/data"]
 EXPOSE 3000
 HEALTHCHECK --interval=30s CMD wget -qO- http://127.0.0.1:3000/healthz || exit 1
-CMD ["node", "--experimental-sqlite", "--no-warnings=ExperimentalWarning", "build/examples/reference-merchant/src/server.js"]
+CMD ["node", "build/examples/reference-merchant/src/server.js"]
