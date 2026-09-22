@@ -12,3 +12,5 @@ examples/reference-merchant/data/
 examples/reference-merchant/outbox/
 test/live/out/
 examples/reference-merchant/deploy/.env.deploy
+site/node_modules/
+site/dist/

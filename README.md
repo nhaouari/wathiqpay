@@ -78,6 +78,16 @@ npm run demo          # run the reference merchant shop with the local simulator
 
 Copy `.env.example` to `.env` for live tests. Never commit credentials or SATIM test cards.
 
+## Repository layout
+
+| Path | Contents |
+|---|---|
+| `src/` | The SDK (published as the npm package) |
+| `test/` | Unit, contract, packaging, and opt-in live tests |
+| `examples/reference-merchant/` | The demo shop used for certification, with its Docker deployment |
+| `docs/` | Integration reference, checklists, evidence log, process notes |
+| `site/` | The public landing page at www.wathiqpay.com (Vite + React, deployed by Vercel with root directory `site`) |
+
 ## Documentation
 
 - [Build and validation plan](plan.md)
