@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WathiqPay Certification Test Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+:root{
+  --paper:#FAF9F6; --ink:#1E2226; --muted:#5B6168; --rule:#E1DFD8; --band:#F1EFE9;
+  --blue:#1B4F86; --pass:#2E6B3F; --pass-bg:#E7F1EA; --warn:#8A5A00; --warn-bg:#FBF1D9; --na:#5B6168; --na-bg:#ECEBE7;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --paper:#15181B; --ink:#E6E4DF; --muted:#A3A7AC; --rule:#2C3136; --band:#1C2024;
+    --blue:#7FB0E6; --pass:#7CC593; --pass-bg:#1C2E22; --warn:#E5B653; --warn-bg:#33291A; --na:#A3A7AC; --na-bg:#23272B;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --paper:#15181B; --ink:#E6E4DF; --muted:#A3A7AC; --rule:#2C3136; --band:#1C2024;
+  --blue:#7FB0E6; --pass:#7CC593; --pass-bg:#1C2E22; --warn:#E5B653; --warn-bg:#33291A; --na:#A3A7AC; --na-bg:#23272B;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.6;padding-inline:clamp(16px,4vw,40px);padding-block:2.5rem 4rem}
+main{max-width:54rem;margin:0 auto;display:grid;gap:2.6rem}
+h1,h2,h3{text-wrap:balance;margin:0}
+h1{font-size:1.9rem;line-height:1.2;font-weight:600;letter-spacing:-.01em}
+h2{font-size:1.2rem;font-weight:600;color:var(--blue);padding-bottom:.4rem;border-bottom:1px solid var(--rule)}
+p{margin:0;max-width:68ch}
+section{display:grid;gap:1rem}
+.code{font-family:var(--mono);font-size:.88em}
+header{display:grid;gap:1.1rem}
+dl.meta{display:grid;grid-template-columns:max-content 1fr;gap:.35rem 1.4rem;margin:0;padding:1rem 1.2rem;background:var(--band);border-radius:4px}
+dl.meta dt{color:var(--muted)}
+dl.meta dd{margin:0;overflow-wrap:anywhere}
+.verdict{display:grid;gap:.8rem}
+.tally{display:flex;flex-wrap:wrap;gap:.6rem}
+.tally span{display:inline-flex;gap:.45rem;align-items:baseline;padding:.3rem .7rem;border-radius:3px;font-size:.92rem}
+.tally b{font-size:1.15rem;font-variant-numeric:tabular-nums}
+.t-pass{background:var(--pass-bg);color:var(--pass)} .t-warn{background:var(--warn-bg);color:var(--warn)} .t-na{background:var(--na-bg);color:var(--na)}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.92rem}
+th,td{text-align:start;vertical-align:top;padding:.55rem .6rem;border-bottom:1px solid var(--rule)}
+thead th{font-weight:500;color:var(--muted);font-size:.84rem;border-bottom-color:var(--ink)}
+td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.pill{display:inline-block;padding:.05rem .5rem;border-radius:3px;font-size:.8rem;font-weight:500;white-space:nowrap}
+.pass{background:var(--pass-bg);color:var(--pass)} .warn{background:var(--warn-bg);color:var(--warn)} .na{background:var(--na-bg);color:var(--na)}
+tr.flag td{background:var(--warn-bg)}
+tr.flag td:first-child{box-shadow:inset 3px 0 0 var(--warn)}
+.msg{color:var(--muted)}
+ol.asks{margin:0;padding-inline-start:1.3rem;display:grid;gap:.8rem;max-width:68ch}
+ol.asks li::marker{color:var(--blue);font-weight:600}
+ul.plain{margin:0;padding-inline-start:1.2rem;display:grid;gap:.35rem;max-width:68ch}
+.note{font-size:.86rem;color:var(--muted)}
+footer{font-size:.84rem;color:var(--muted);border-top:1px solid var(--rule);padding-top:1rem;display:grid;gap:.4rem}
+@media print{body{background:#fff;color:#000}tr.flag td{background:#fff3d6}}
+@media (max-width:560px){dl.meta{grid-template-columns:1fr;gap:.1rem}dl.meta dd{margin-bottom:.5rem}}
+</style>
+</head>
+<body>
+
+<main>
+  <header>
+    <h1>WathiqPay payment module: certification test report</h1>
+    <p>Tests of the WathiqPay payment module and its reference merchant against SATIM's certification platform, run before booking the qualification session.</p>
+    <dl class="meta">
+      <dt>Module</dt><dd>WathiqPay SDK <span class="code">0.1.0-alpha.0</span> (TypeScript, Node.js) with its reference merchant</dd>
+      <dt>Merchant site tested</dt><dd><span class="code">https://wathiqpay-demo2.vercel.app</span> (HTTPS)</dd>
+      <dt>SATIM environment</dt><dd>Certification: API <span class="code">test2.satim.dz</span>, hosted payment page <span class="code">test.satim.dz</span></dd>
+      <dt>Merchant on SATIM page</dt><dd>WATHIQ PAY</dd>
+      <dt>Test date</dt><dd>22 September 2026, 20:20–20:45 (Algiers time)</dd>
+      <dt>Revisions tested</dt><dd><span class="code">92f2856</span> (card scenarios and flow checks) to <span class="code">174fb6f</span> (Arabic receipt, receipt access, final configuration)</dd>
+      <dt>Source code</dt><dd><span class="code">github.com/nhaouari/wathiqpay</span></dd>
+      <dt>Test cards</dt><dd>The 15 certification cards published in the CIBWEBLab portal. Card numbers are not reproduced in this report.</dd>
+    </dl>
+  </header>
+
+  <section class="verdict">
+    <h2>Result</h2>
+    <p>The merchant site handled every SATIM response correctly. It confirmed each payment with SATIM from the server, and it showed each result to the customer as SATIM returned it. Four test cards did not produce the result their scenario name describes. Those four outcomes come from SATIM's test data, and we ask SATIM to review them below.</p>
+    <div class="tally">
+      <span class="t-pass"><b>11</b> card scenarios as expected</span>
+      <span class="t-warn"><b>3</b> cards approved where a refusal is expected</span>
+      <span class="t-na"><b>1</b> card cannot be entered</span>
+      <span class="t-pass"><b>16</b> of 16 site checks passed</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>Card scenarios</h2>
+    <p>Each scenario was a real purchase on the merchant site: add to cart, checkout, SATIM's hosted card page and 3-D Secure password page, SATIM's redirect back, confirmation by the merchant server (<span class="code">acknowledgeTransaction.do</span>), and the result page. Amount 1 200,00 DZD unless stated.</p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Scenario</th><th>Order ref.</th><th>Message shown to the customer (from SATIM)</th><th>Expected</th><th>Result</th></tr></thead>
+        <tbody>
+          <tr><td>Valid card</td><td class="code">WNL2QPUTC6</td><td class="msg">Votre paiement a été accepté.</td><td>Accepted</td><td><span class="pill pass">Pass</span></td></tr>
+          <tr><td>Valid credit</td><td class="code">WM7YWW2RFX</td><td class="msg">Votre paiement a été accepté.</td><td>Accepted</td><td><span class="pill pass">Pass</span></td></tr>
+          <tr><td>Temporarily blocked</td><td class="code">W9DT6KD6U6</td><td class="msg">Paiement refusé : carte signalée comme bloquée… Code d'erreur : 37</td><td>Refused</td><td><span class="pill pass">Pass</span></td></tr>
+          <tr><td>Lost</td><td class="code">WM2C9N2ST9</td><td class="msg">Paiement refusé : carte signalée comme perdue… Code d'erreur : 41</td><td>Refused</td><td><span class="pill pass">Pass</span></td></tr>
+          <tr><td>Stolen</td><td class="code">WVGXLZQ6GC</td><td class="msg">Paiement refusé : carte signalée comme volée… Code d'erreur : 43</td><td>Refused</td><td><span class="pill pass">Pass</span></td></tr>
+          <tr><td>Incorrect expiry date</td><td class="code">WJHY984R33</td><td class="msg">Paiement refusé : date d'expiration incorrecte… Code d'erreur : AD</td><td>Refused</td><td><span class="pill pass">Pass</span></td></tr>
+          <tr><td>Insufficient balance</td><td class="code">W3D7XQB3YJ</td><td class="msg">Paiement refusé : fonds insuffisants… Code d'erreur : 51</td><td>Refused</td><td><span class="pill pass">Pass</span></td></tr>
+          <tr><td>Incorrect CVV2</td><td class="code">W9UVRN5A84</td><td class="msg">Paiement refusé : code CVV incorrect… Code d'erreur : AB</td><td>Refused</td><td><span class="pill pass">Pass</span></td></tr>
+          <tr><td>Three incorrect password attempts</td><td class="code">WWH5XKYS8A</td><td class="msg">Card blocked for E-payments. Contact your bank Error code :2003.</td><td>Refused</td><td><span class="pill pass">Pass</span></td></tr>
+          <tr><td>Not authorised for online payment</td><td class="code">WRN5C5WSHH</td><td class="msg">Card blocked for E-payments. Contact your bank Error code :2003.</td><td>Refused</td><td><span class="pill pass">Pass</span></td></tr>
+          <tr><td>Not active for online payment</td><td class="code">WMVQCHKMWN</td><td class="msg">Paiement refusé : carte inactive… Code d'erreur : AE</td><td>Refused</td><td><span class="pill pass">Pass</span></td></tr>
+          <tr class="flag"><td>Card limit exceeded</td><td class="code">WZJ9HGQGKW<br>WKEEYBJHY5</td><td class="msg">Votre paiement a été accepté. Also accepted at 2 376 000,00 DZD.</td><td>Refused</td><td><span class="pill warn">Approved by SATIM</span></td></tr>
+          <tr class="flag"><td>Terminal / transaction amount limit exceeded</td><td class="code">WM6LGVDQLA<br>W8J798JDNR</td><td class="msg">Votre paiement a été accepté. Also accepted at 2 376 000,00 DZD.</td><td>Refused</td><td><span class="pill warn">Approved by SATIM</span></td></tr>
+          <tr class="flag"><td>Expired card (expiry 12/2022)</td><td class="code">WSH3JAJ3KF</td><td class="msg">Votre paiement a été accepté.</td><td>Refused</td><td><span class="pill warn">Approved by SATIM</span></td></tr>
+          <tr class="flag"><td>Card no longer exists on issuer server (expiry 01/2025)</td><td class="code">—</td><td class="msg">Not reached. The expiry year 2025 is not offered in the hosted page's year list, so the card cannot be submitted.</td><td>Refused</td><td><span class="pill na">Cannot be entered</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">A wrong 3-D Secure password with a valid card keeps the customer on SATIM's password page to try again; no payment is made. The password lockout itself is covered by the "three incorrect password attempts" card.</p>
+  </section>
+
+  <section>
+    <h2>Refunds and cancellation</h2>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Test</th><th>SATIM response</th><th>Result</th></tr></thead>
+        <tbody>
+          <tr><td>Partial refund of 20,00 DZD on a paid 50,00 DZD order</td><td>Success. Order status 4, 30,00 DZD still captured.</td><td><span class="pill pass">Pass</span></td></tr>
+          <tr><td>Refund of the remaining 30,00 DZD</td><td>Success. Order status 4, nothing left captured.</td><td><span class="pill pass">Pass</span></td></tr>
+          <tr><td>Further refund of 1,00 DZD</td><td>Refused, error 7: "Refund is impossible for current transaction state".</td><td><span class="pill pass">Pass</span></td></tr>
+          <tr><td>Customer clicks "Annuler" on SATIM's page</td><td>Redirect to the failure page with "Operation cancelled by user". Order not paid.</td><td><span class="pill pass">Pass</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Merchant site checks</h2>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Requirement</th><th>Result</th></tr></thead>
+        <tbody>
+          <tr><td>Site served over HTTPS with a valid certificate</td><td><span class="pill pass">Pass</span></td></tr>
+          <tr><td>Total amount shown clearly before payment and kept the same on the result page and receipt</td><td><span class="pill pass">Pass</span></td></tr>
+          <tr><td>CAPTCHA on the page with the payment button; a wrong answer blocks payment</td><td><span class="pill pass">Pass</span></td></tr>
+          <tr><td>Terms of sale and online-payment terms shown before payment and must be accepted</td><td><span class="pill pass">Pass</span></td></tr>
+          <tr><td>CIB/Edahabia banner (taken unchanged from SATIM's payment page) on the payment button</td><td><span class="pill pass">Pass</span></td></tr>
+          <tr><td>Customer name and Algerian phone number required</td><td><span class="pill pass">Pass</span></td></tr>
+          <tr><td>SATIM's payment page opens as its own page, not inside a frame</td><td><span class="pill pass">Pass</span></td></tr>
+          <tr><td>Same language from shop to SATIM page to result: French, Arabic (right to left), English</td><td><span class="pill pass">Pass</span></td></tr>
+          <tr><td>Success page shows SATIM's message, SATIM transaction ID, order number, approval code, date and time, amount, payment method, and SATIM support 3020</td><td><span class="pill pass">Pass</span></td></tr>
+          <tr><td>Refusal page shows SATIM's message (or the action-code description when SATIM sends none) and 3020, with no technical details</td><td><span class="pill pass">Pass</span></td></tr>
+          <tr><td>Receipt can be printed</td><td><span class="pill pass">Pass</span></td></tr>
+          <tr><td>Receipt can be downloaded as PDF, including in Arabic</td><td><span class="pill pass">Pass</span></td></tr>
+          <tr><td>Payment accepted only when SATIM returns respCode 00, ErrorCode 0 and OrderStatus 2, with matching amount and order number</td><td><span class="pill pass">Pass</span></td></tr>
+          <tr><td>Returning to the result page again does not deliver the order a second time</td><td><span class="pill pass">Pass</span></td></tr>
+          <tr><td>A forged SATIM order ID in the return address is rejected</td><td><span class="pill pass">Pass</span></td></tr>
+          <tr><td>Receipts can only be opened by the customer who placed the order</td><td><span class="pill pass">Pass</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">Sending the receipt by e-mail is implemented but switched off for this phase. The option is hidden on the site until a mail server is configured; print and PDF receipts remain available.</p>
+  </section>
+
+  <section>
+    <h2>Points for SATIM</h2>
+    <p>We ask SATIM to confirm the expected result, or provide replacement test cards, for the following:</p>
+    <ol class="asks">
+      <li><strong>Card limit exceeded</strong> and <strong>terminal / transaction amount limit exceeded</strong> were approved at 1 200,00 DZD and at 2 376 000,00 DZD. Which amount or setting should produce the refusal?</li>
+      <li><strong>Expired card</strong> (expiry 12/2022) was approved. Is this card still valid for the scenario?</li>
+      <li><strong>Card no longer exists on issuer server</strong> (expiry 01/2025) cannot be entered because 2025 is not in the payment page's year list. Is a replacement card available?</li>
+      <li>Some refusals (error 2003) and the cancellation arrive with English text only, which then appears on French and Arabic pages. Is a translated message available?</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Technical observations</h2>
+    <ul class="plain">
+      <li>All calls use POST with form encoding; SATIM accepted this for registration, confirmation and refund.</li>
+      <li>Confirmation (<span class="code">acknowledgeTransaction.do</span>) returned identical answers when called twice for the same order, paid or unpaid.</li>
+      <li>An unknown order number is answered with HTTP 401 and the text "Transaction is not found", instead of the documented error code 6. The module handles both.</li>
+      <li>After any refund SATIM reports order status 4; the remaining captured amount tells a partial refund from a full one. The module shows these as "partially refunded" and "refunded".</li>
+      <li>The hosted payment session lasts about ten minutes. Payments completed but not returned to the site are confirmed later by a reconciliation job.</li>
+    </ul>
+  </section>
+
+  <footer>
+    <div>Prepared by WathiqPay. Card numbers, security codes, passwords and merchant credentials are deliberately excluded from this report. Order references refer to the merchant site's own order numbers; SATIM transaction IDs are available on request.</div>
+    <div>Detailed evidence: <span class="code">docs/live-evidence.md</span> and <span class="code">docs/certification-checklist.md</span> in the source repository.</div>
+  </footer>
+</main>
+</body>
+</html>
