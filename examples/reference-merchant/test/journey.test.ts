@@ -369,6 +369,25 @@ describe("Arabic PDF receipt", () => {
   });
 });
 
+describe("long PDF receipts", () => {
+  test("flow onto several pages with page numbers, in both directions", async () => {
+    const { buildReceiptPdf } = await import("../src/receipt-pdf.js");
+    const many = Array.from({ length: 60 }, (_, i) => ({ label: `${i + 1} ×`, value: `Article numéro ${i + 1} avec un nom assez long pour être replié sur deux lignes dans la colonne  1 200,00 DZD` }));
+    const ltr = (await buildReceiptPdf({ direction: "ltr", title: "Reçu", lines: many, footer: ["Service client SATIM : 3020"] })).toString("latin1");
+    const pagesLtr = Number(/\/Count (\d+)/.exec(ltr)![1]);
+    assert.ok(pagesLtr >= 3, `expected several pages, got ${pagesLtr}`);
+    assert.match(ltr, new RegExp(`\\(${pagesLtr} / ${pagesLtr}\\) Tj`), "last page is numbered");
+    assert.match(ltr, /\(Service client SATIM : 3020\) Tj/, "footer still printed");
+    assert.match(ltr, /1\xa0200,00\xa0DZD\) Tj/, "an amount is never split across lines");
+    const arMany = Array.from({ length: 50 }, (_, i) => ({ label: `${i + 1} ×`, value: "تمر دقلة نور 1 كغ من بسكرة محصول السنة حجم ممتاز  1 200,00 دج" }));
+    const rtl = (await buildReceiptPdf({ direction: "rtl", title: "إيصال الدفع", lines: arMany, footer: ["خدمة عملاء SATIM: 3020"] })).toString("latin1");
+    assert.ok(Number(/\/Count (\d+)/.exec(rtl)![1]) >= 2, "Arabic receipt spans pages");
+    const short = (await buildReceiptPdf({ direction: "ltr", title: "Reçu", lines: [{ label: "Montant", value: "1 200,00 DZD" }], footer: [] })).toString("latin1");
+    assert.match(short, /\/Count 1 /);
+    assert.doesNotMatch(short, /\(1 \/ 1\) Tj/, "no page number on single-page receipts");
+  });
+});
+
 describe("receipt e-mail disabled", () => {
   test("without a mail transport the e-mail form is hidden and the endpoint is off", async () => {
     const { createUnconfiguredMailer } = await import("../src/mailer.js");

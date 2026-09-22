@@ -1,6 +1,7 @@
 /**
  * Single-page PDF receipts without a PDF library.
  *
+ * - Receipts flow onto further pages when long; long values wrap by words.
  * - French and English: the standard Helvetica fonts (WinAnsi), no embedding.
  * - Arabic: Arabic runs are shaped with HarfBuzz and drawn in an embedded
  *   Noto Sans Arabic (CIDFontType2, Identity-H, FlateDecode). Latin runs
@@ -43,6 +44,7 @@ const HELV_BOLD: Record<string, number> = {};
     HELV_BOLD[c] = bold[i]!;
   });
   HELV["×"] = HELV_BOLD["×"] = 584;
+  HELV["\u00a0"] = HELV_BOLD["\u00a0"] = 278;
 }
 
 function helvWidth(s: string, size: number, bold: boolean): number {
@@ -255,12 +257,10 @@ function fontObjects(font: ArabicFont, firstObj: number): { objects: Buffer[]; r
   };
 }
 
-function assemble(content: string, extraFonts: ArabicFont[]): Buffer {
-  const stream = Buffer.from(content, "latin1");
-  // 1 catalog, 2 pages, 3 page, 4 content, 5 Helvetica, 6 Helvetica-Bold, 7.. embedded fonts
-  const objects: Buffer[] = [];
-  const fontRefs: string[] = ["/F1 5 0 R", "/F2 6 0 R"];
-  let next = 7;
+function assemble(pages: string[], extraFonts: ArabicFont[]): Buffer {
+  // 1 catalog, 2 pages tree, 3 Helvetica, 4 Helvetica-Bold, then embedded fonts, then (page, content) pairs.
+  const fontRefs: string[] = ["/F1 3 0 R", "/F2 4 0 R"];
+  let next = 5;
   const fontObjs: Buffer[] = [];
   for (const f of extraFonts) {
     if (f.used.size === 0) continue;
@@ -269,15 +269,27 @@ function assemble(content: string, extraFonts: ArabicFont[]): Buffer {
     fontObjs.push(...objs);
     next += objs.length;
   }
-  objects.push(
+  const pageObjs: Buffer[] = [];
+  const kids: string[] = [];
+  for (const content of pages) {
+    const pageNo = next;
+    const contentNo = next + 1;
+    next += 2;
+    kids.push(`${pageNo} 0 R`);
+    const stream = Buffer.from(content, "latin1");
+    pageObjs.push(
+      Buffer.from(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PAGE_W} ${PAGE_H}] /Contents ${contentNo} 0 R /Resources << /Font << ${fontRefs.join(" ")} >> >> >>`),
+      Buffer.concat([Buffer.from(`<< /Length ${stream.length} >>\nstream\n`), stream, Buffer.from("\nendstream")]),
+    );
+  }
+  const objects: Buffer[] = [
     Buffer.from("<< /Type /Catalog /Pages 2 0 R >>"),
-    Buffer.from("<< /Type /Pages /Kids [3 0 R] /Count 1 >>"),
-    Buffer.from(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PAGE_W} ${PAGE_H}] /Contents 4 0 R /Resources << /Font << ${fontRefs.join(" ")} >> >> >>`),
-    Buffer.concat([Buffer.from(`<< /Length ${stream.length} >>\nstream\n`), stream, Buffer.from("\nendstream")]),
+    Buffer.from(`<< /Type /Pages /Kids [${kids.join(" ")}] /Count ${pages.length} >>`),
     Buffer.from("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>"),
     Buffer.from("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>"),
     ...fontObjs,
-  );
+    ...pageObjs,
+  ];
   const parts: Buffer[] = [Buffer.from("%PDF-1.4\n%\xE2\xE3\xCF\xD3\n", "latin1")];
   const offsets: number[] = [];
   let length = parts[0]!.length;
@@ -292,48 +304,106 @@ function assemble(content: string, extraFonts: ArabicFont[]): Buffer {
   return Buffer.concat(parts);
 }
 
+// ---------------------------------------------------------------------------
+// Page flow shared by both directions: new page when the next line would
+// cross the bottom margin; long values wrap by words.
+
+const TOP = 790;
+const BOTTOM = 70;
+
+class PageFlow {
+  pages: string[][] = [[]];
+  y = TOP;
+  get current(): string[] {
+    return this.pages[this.pages.length - 1]!;
+  }
+  /** Reserve `h` points for the next line, breaking the page if needed. */
+  line(h: number): number {
+    if (this.y - h < BOTTOM) {
+      this.pages.push([]);
+      this.y = TOP;
+    }
+    const y = this.y;
+    this.y -= h;
+    return y;
+  }
+  gap(h: number): void {
+    this.y -= h;
+  }
+}
+
+/** Keep amounts ("1 800,00 DZD", "1 800,00 دج") on one line: join their spaces with no-break spaces. */
+function glueAmounts(text: string): string {
+  return text.replace(/(\d) (?=\d)/g, "$1\u00a0").replace(/ (DZD|دج)/g, "\u00a0$1");
+}
+
+function wrap(raw: string, maxWidth: number, measure: (s: string) => number): string[] {
+  const text = glueAmounts(raw);
+  if (measure(text) <= maxWidth) return [text];
+  const words = text.split(/ +/);
+  const lines: string[] = [];
+  let cur = "";
+  for (const w of words) {
+    const next = cur ? `${cur} ${w}` : w;
+    if (cur && measure(next) > maxWidth) {
+      lines.push(cur);
+      cur = w;
+    } else cur = next;
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+
 function buildLtr(input: ReceiptPdfInput): Buffer {
-  const content: string[] = [];
-  let y = 790;
-  const text = (x: number, size: number, s: string, bold = false) => content.push(`BT /${bold ? "F2" : "F1"} ${size} Tf ${x} ${y} Td (${escapeLatin(s)}) Tj ET`);
-  text(MARGIN, 18, input.title, true);
-  y -= 34;
+  const flow = new PageFlow();
+  const text = (y: number, x: number, size: number, s: string, bold = false) =>
+    flow.current.push(`BT /${bold ? "F2" : "F1"} ${size} Tf ${x} ${y.toFixed(2)} Td (${escapeLatin(s)}) Tj ET`);
+  const valueX = 230;
+  const valueW = PAGE_W - MARGIN - valueX;
+  text(flow.line(34), MARGIN, 18, input.title, true);
   for (const line of input.lines) {
-    text(MARGIN, 11, line.label, true);
-    text(230, 11, line.value);
-    y -= 20;
+    const parts = wrap(line.value, valueW, (s) => helvWidth(s, 11, false));
+    parts.forEach((part, i) => {
+      const y = flow.line(i === parts.length - 1 ? 20 : 15);
+      if (i === 0) text(y, MARGIN, 11, line.label, true);
+      text(y, valueX, 11, part);
+    });
   }
-  y -= 10;
-  for (const f of input.footer) {
-    text(MARGIN, 10, f);
-    y -= 16;
+  flow.gap(10);
+  for (const f of input.footer) text(flow.line(16), MARGIN, 10, f);
+  const total = flow.pages.length;
+  if (total > 1) {
+    flow.pages.forEach((page, i) => page.push(`BT /F1 9 Tf ${MARGIN} 40 Td (${i + 1} / ${total}) Tj ET`));
   }
-  return assemble(content.join("\n"), []);
+  return assemble(flow.pages.map((p) => p.join("\n")), []);
 }
 
 async function buildRtl(input: ReceiptPdfInput): Promise<Buffer> {
   const fonts = { reg: await loadArabicFont("NotoSansArabic-Regular.ttf", "A1"), bold: await loadArabicFont("NotoSansArabic-Bold.ttf", "A2") };
-  const content: string[] = [];
+  const flow = new PageFlow();
   const right = PAGE_W - MARGIN;
   const valueRight = 360;
-  let y = 790;
-  const put = (s: string, size: number, bold: boolean, rightEdge: number) => {
+  const valueW = valueRight - MARGIN;
+  const put = (y: number, s: string, size: number, bold: boolean, rightEdge: number) => {
     const run = layoutRtl(s, size, bold, fonts);
-    content.push(run.draw(rightEdge - run.width, y));
+    flow.current.push(run.draw(rightEdge - run.width, y));
   };
-  put(input.title, 18, true, right);
-  y -= 36;
+  put(flow.line(36), input.title, 18, true, right);
   for (const line of input.lines) {
-    put(line.label, 11, true, right);
-    put(line.value, 11, false, valueRight);
-    y -= 22;
+    const parts = wrap(line.value, valueW, (s) => layoutRtl(s, 11, false, fonts).width);
+    parts.forEach((part, i) => {
+      const y = flow.line(i === parts.length - 1 ? 22 : 16);
+      if (i === 0) put(y, line.label, 11, true, right);
+      put(y, part, 11, false, valueRight);
+    });
   }
-  y -= 10;
-  for (const f of input.footer) {
-    put(f, 10, false, right);
-    y -= 18;
+  flow.gap(10);
+  for (const f of input.footer) put(flow.line(18), f, 10, false, right);
+  const total = flow.pages.length;
+  if (total > 1) {
+    flow.pages.forEach((page, i) => page.push(`BT /F1 9 Tf ${right - 30} 40 Td (${i + 1} / ${total}) Tj ET`));
   }
-  return assemble(content.join("\n"), [fonts.reg, fonts.bold]);
+  return assemble(flow.pages.map((p) => p.join("\n")), [fonts.reg, fonts.bold]);
 }
 
 export async function buildReceiptPdf(input: ReceiptPdfInput): Promise<Buffer> {
