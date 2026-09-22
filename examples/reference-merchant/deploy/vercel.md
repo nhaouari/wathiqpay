@@ -4,6 +4,8 @@ The shop runs as one Vercel serverless function (`api/merchant.ts`), with produc
 
 ## 1. Database (Turso, free tier)
 
+Either install the **Turso** integration from the Vercel Marketplace on the `wathiqpay-demo` project (it creates a database and injects `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN`, which the shop reads directly), or create one with the CLI:
+
 ```bash
 brew install tursodatabase/tap/turso   # or: curl -sSfL https://get.tur.so/install.sh | bash
 turso auth signup                      # or turso auth login

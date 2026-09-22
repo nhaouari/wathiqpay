@@ -46,7 +46,8 @@ export function configFromEnv(env: NodeJS.ProcessEnv = process.env): MerchantCon
           terminalId: required(env, "SATIM_TERMINAL_ID"),
           baseUrl: env["SATIM_BASE_URL"],
         };
-  const dbUrl = env["MERCHANT_DB_URL"] ?? (env["MERCHANT_DB"] ? `file:${env["MERCHANT_DB"]}` : "file:examples/reference-merchant/data/merchant.sqlite");
+  // MERCHANT_DB_URL wins; TURSO_DATABASE_URL is what the Vercel Turso integration injects.
+  const dbUrl = env["MERCHANT_DB_URL"] ?? env["TURSO_DATABASE_URL"] ?? (env["MERCHANT_DB"] ? `file:${env["MERCHANT_DB"]}` : "file:examples/reference-merchant/data/merchant.sqlite");
   if (env["VERCEL"] && dbUrl.startsWith("file:")) {
     throw new Error("MERCHANT_DB_URL must point to a hosted libSQL database (libsql://…) on Vercel; the filesystem there is read-only and not persistent. See examples/reference-merchant/deploy/vercel.md.");
   }
