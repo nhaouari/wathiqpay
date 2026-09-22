@@ -1,8 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import * as fx from "../fixtures/synthetic/index.js";
-import { parseRegisterResponse, parseAcknowledgeResponse, parseRefundResponse, parseJsonObject, normalizeCode } from "../../src/responses.js";
-import { GatewayError, MalformedResponseError } from "../../src/errors.js";
+import { parseRegisterResponse, parseAcknowledgeResponse, parseRefundResponse, parseJsonObject, normalizeCode, interpretHttpResponse } from "../../src/responses.js";
+import { GatewayError, MalformedResponseError, TransportError } from "../../src/errors.js";
 
 test("normalizeCode treats 0, '0', and '00' alike but never coerces missing values", () => {
   assert.equal(normalizeCode(0), "0");
@@ -83,4 +83,27 @@ test("parseJsonObject rejects non-objects", () => {
   assert.throws(() => parseJsonObject("null"), MalformedResponseError);
   assert.throws(() => parseJsonObject(""), MalformedResponseError);
   assert.deepEqual(parseJsonObject('{"a":1}'), { a: 1 });
+});
+
+test("live-observed shapes: registered-unpaid acknowledgement and register success", () => {
+  const r = parseAcknowledgeResponse(fx.ackRegisteredLive);
+  assert.equal(r.errorCode, "0");
+  assert.equal(r.orderStatus, 0);
+  assert.equal(r.amountMinor, "5000");
+  assert.equal(r.depositAmountMinor, "0");
+  assert.equal(r.maskedPan, undefined, 'Pan "" is treated as absent');
+  assert.equal(r.respCode, undefined);
+  const reg = parseRegisterResponse(fx.registerSuccessLive);
+  assert.equal(new URL(reg.formUrl).hostname, "test.satim.dz");
+});
+
+test("interpretHttpResponse: 401 with a JSON string is a gateway rejection, other non-2xx are transport errors", () => {
+  assert.throws(
+    () => interpretHttpResponse("acknowledge", fx.ackUnknownOrderLive.status, fx.ackUnknownOrderLive.bodyText),
+    (e: unknown) => e instanceof GatewayError && e.errorCode === "http_401" && e.errorMessage === "Transaction is not found" && e.httpStatus === 401 && e.outcome === "rejected",
+  );
+  assert.throws(() => interpretHttpResponse("register", 403, '{"errorCode":5,"errorMessage":"Access denied"}'), (e: unknown) => e instanceof GatewayError && e.errorCode === "5" && e.httpStatus === 403);
+  assert.throws(() => interpretHttpResponse("refund", 500, "boom"), (e: unknown) => e instanceof TransportError && e.kind === "http-status" && e.status === 500 && e.bodyText === "boom");
+  assert.throws(() => interpretHttpResponse("refund", 502, ""), (e: unknown) => e instanceof TransportError && e.status === 502);
+  assert.deepEqual(interpretHttpResponse("register", 200, '{"errorCode":0,"orderId":"x","formUrl":"y"}'), { errorCode: 0, orderId: "x", formUrl: "y" });
 });

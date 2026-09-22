@@ -1,7 +1,7 @@
 import { ConfigurationError } from "./errors.js";
 import type { Money } from "./money.js";
 import { normalizeLanguage, validateCredentials, buildRegisterParams, buildAcknowledgeParams, buildRefundParams, type AcknowledgeInput, type Language, type RefundInput, type RegisterOrderInput, type WireLanguage } from "./requests.js";
-import { parseAcknowledgeResponse, parseJsonObject, parseRefundResponse, parseRegisterResponse, type AcknowledgeResult, type RefundResult, type RegisterResult } from "./responses.js";
+import { parseAcknowledgeResponse, interpretHttpResponse, parseRefundResponse, parseRegisterResponse, type AcknowledgeResult, type RefundResult, type RegisterResult } from "./responses.js";
 import { createFetchTransport, type FetchLike, type Transport } from "./transport.js";
 
 export type Environment = "certification" | "production" | "simulator";
@@ -102,9 +102,9 @@ export function createClient(config: ClientConfig): WathiqPayClient {
   const allowInsecureReturnUrls = config.allowInsecureReturnUrls ?? false;
   const environment = config.environment;
 
-  async function post(path: string, body: URLSearchParams, options: CallOptions | undefined) {
+  async function post(operation: "register" | "acknowledge" | "refund", path: string, body: URLSearchParams, options: CallOptions | undefined) {
     const response = await transport({ url: baseUrl + path, body, timeoutMs, signal: options?.signal });
-    return parseJsonObject(response.bodyText);
+    return interpretHttpResponse(operation, response.status, response.bodyText);
   }
 
   return {
@@ -117,16 +117,16 @@ export function createClient(config: ClientConfig): WathiqPayClient {
         defaultLanguage,
         allowInsecureReturnUrls,
       });
-      return parseRegisterResponse(await post(ENDPOINTS.register, body, options));
+      return parseRegisterResponse(await post("register", ENDPOINTS.register, body, options));
     },
     async acknowledgeTransaction(input, options) {
       const ack: AcknowledgeInput = typeof input === "string" ? { orderId: input } : input;
       const body = buildAcknowledgeParams(ack, { ...credentials, defaultLanguage });
-      return parseAcknowledgeResponse(await post(ENDPOINTS.acknowledge, body, options));
+      return parseAcknowledgeResponse(await post("acknowledge", ENDPOINTS.acknowledge, body, options));
     },
     async refund(input, options) {
       const body = buildRefundParams(input, credentials);
-      return parseRefundResponse(await post(ENDPOINTS.refund, body, options));
+      return parseRefundResponse(await post("refund", ENDPOINTS.refund, body, options));
     },
   };
 }

@@ -142,8 +142,11 @@ button{display:block;width:100%;margin:.4rem 0;padding:.7rem;font:inherit;border
     switch (path) {
       case "/register.do":
         return json(res, 200, this.register(form));
-      case "/public/acknowledgeTransaction.do":
-        return json(res, 200, this.acknowledge(form));
+      case "/public/acknowledgeTransaction.do": {
+        const out = this.acknowledge(form);
+        if ("__status" in out) return send(res, out.__status as number, out.__body as string, { "content-type": "application/json" });
+        return json(res, 200, out);
+      }
       case "/refund.do":
         return json(res, 200, this.refund(form));
       default:
@@ -183,9 +186,10 @@ button{display:block;width:100%;margin:.4rem 0;padding:.7rem;font:inherit;border
     return { errorCode: 0, orderId, formUrl: `${this.baseUrl.replace("/payment/rest", "")}/hosted/${orderId}` };
   }
 
-  private acknowledge(form: Record<string, string>): Record<string, unknown> {
+  private acknowledge(form: Record<string, string>): Record<string, unknown> | { __status: number; __body: string } {
     const o = this.orders.get(form["mdOrder"] ?? "");
-    if (!o) return fx.ackUnknownOrder;
+    // Live-observed: SATIM answers an unknown mdOrder with HTTP 401 and a JSON string.
+    if (!o) return { __status: fx.ackUnknownOrderLive.status, __body: fx.ackUnknownOrderLive.bodyText };
     const base = { ErrorCode: "0", ErrorMessage: "Success", OrderStatus: o.status, OrderNumber: o.orderNumber, Amount: Number(o.amount), currency: "012" };
     if (o.status === 2) return { ...fx.ackPaid, ...base, depositAmount: Number(o.amount) };
     if (o.status === 4) return { ...fx.ackRefunded, ...base };

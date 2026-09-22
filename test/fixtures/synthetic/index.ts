@@ -61,3 +61,30 @@ export const ackCredentialsDeclined = { ErrorCode: "2", ErrorMessage: "Declined"
 export const refundSuccess = { errorCode: 0, errorMessage: "Success" };
 export const refundInvalidState = { errorCode: "7", errorMessage: "Transaction in invalid state" };
 export const refundEmpty = {};
+
+// ---- Live-observed shapes from the certification gateway (22 September 2026), sanitized.
+
+/** register.do success: errorCode is numeric; formUrl is on test.satim.dz, not the API host. */
+export const registerSuccessLive = {
+  errorCode: 0,
+  orderId: "LIVEORDERIDXXXXXXXXX",
+  formUrl: "https://test.satim.dz/payment/epg/merchants/merchantsatim/payment.html?mdOrder=LIVEORDERIDXXXXXXXXX&language=fr",
+};
+
+/** acknowledgeTransaction.do before any payment attempt: Pan is "", ErrorCode is a string, Amount numeric. */
+export const ackRegisteredLive = {
+  depositAmount: 0,
+  currency: "012",
+  actionCode: -100,
+  actionCodeDescription: "No payment attempted yet.",
+  ErrorCode: "0",
+  ErrorMessage: "Success",
+  OrderStatus: 0,
+  OrderNumber: "LMUCW7NVN",
+  Pan: "",
+  Amount: 5000,
+  Description: "WathiqPay live smoke",
+};
+
+/** acknowledgeTransaction.do for an unknown mdOrder: HTTP 401 with a bare JSON string body. */
+export const ackUnknownOrderLive = { status: 401, bodyText: '"Transaction is not found"' };

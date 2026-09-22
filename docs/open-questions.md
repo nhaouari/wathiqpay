@@ -5,7 +5,7 @@ The accessible certification portal leaves the following points undocumented or 
 ## Endpoints and connectivity
 
 1. What is the official production REST base URL?
-2. Is `POST` with `application/x-www-form-urlencoded` formally supported for all three endpoints?
+2. Is `POST` with `application/x-www-form-urlencoded` formally supported for all three endpoints? *Live-observed 22 September 2026: accepted by `register.do` and `acknowledgeTransaction.do` in certification; `refund.do` untested; formal confirmation still wanted.*
 3. Are merchant-server IP allowlisting, mTLS, or client certificates required?
 4. Which TLS versions and cipher requirements apply?
 5. What are the official connection and response timeouts?
@@ -14,9 +14,9 @@ The accessible certification portal leaves the following points undocumented or 
 
 ## Transaction lifecycle
 
-8. Is `acknowledgeTransaction.do` safe and idempotent when called repeatedly?
+8. Is `acknowledgeTransaction.do` safe and idempotent when called repeatedly? *Live-observed: two calls on an unpaid order returned identical responses. Behaviour after a paid outcome still unverified.*
 9. Does acknowledgement mutate transaction state, or only query/confirm it?
-10. Exactly how long may pass before an unacknowledged transaction is reversed?
+10. Exactly how long may pass before an unacknowledged transaction is reversed? *Live-observed: the hosted page shows a session timer starting at about ten minutes; the acknowledgement window itself is still undocumented.*
 11. Is there a read-only transaction-status endpoint for reconciliation?
 12. Are server-to-server notifications or webhooks available?
 13. Should a one-phase approved payment with `OrderStatus=1` be fulfilled, or is `OrderStatus=2` always required?
@@ -45,7 +45,7 @@ The accessible certification portal leaves the following points undocumented or 
 27. Are language values case-sensitive?
 28. Are numeric response fields consistently numbers, strings, or potentially both?
 29. Is the capitalization of `ErrorCode`, `OrderStatus`, `OrderNumber`, `Pan`, and `Amount` guaranteed?
-30. Can SATIM provide a complete machine-readable error-code catalogue?
+30. Can SATIM provide a complete machine-readable error-code catalogue? *Live-observed: an unknown `mdOrder` returns HTTP 401 with the JSON string `"Transaction is not found"` instead of the documented `ErrorCode 6`. Which other errors use HTTP status codes rather than in-body codes?*
 31. Can SATIM provide an OpenAPI specification or a versioned integration manual?
 32. How are breaking API changes communicated and versioned?
 

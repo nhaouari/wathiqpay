@@ -45,14 +45,17 @@ export class TransportError extends WathiqPayError {
   readonly outcome = "indeterminate";
   readonly kind: "network" | "timeout" | "aborted" | "redirect" | "http-status";
   readonly status: number | undefined;
+  /** Response body for http-status failures (truncated); never contains the request. */
+  readonly bodyText: string | undefined;
   constructor(
     kind: TransportError["kind"],
     message: string,
-    options?: { cause?: unknown; status?: number },
+    options?: { cause?: unknown; status?: number; bodyText?: string },
   ) {
     super(message, options?.cause === undefined ? undefined : { cause: options.cause });
     this.kind = kind;
     this.status = options?.status;
+    this.bodyText = options?.bodyText?.slice(0, 512);
   }
 }
 
@@ -76,17 +79,21 @@ export class GatewayError extends WathiqPayError {
   readonly errorCode: string;
   readonly errorMessage: string | undefined;
   readonly raw: Record<string, unknown>;
+  /** HTTP status of the rejection (200 for documented in-body error codes). */
+  readonly httpStatus: number;
   constructor(
     operation: GatewayError["operation"],
     errorCode: string,
     errorMessage: string | undefined,
     raw: Record<string, unknown>,
+    httpStatus = 200,
   ) {
     super(`SATIM ${operation} rejected with errorCode ${errorCode}${errorMessage ? `: ${errorMessage}` : ""}`);
     this.operation = operation;
     this.errorCode = errorCode;
     this.errorMessage = errorMessage;
     this.raw = raw;
+    this.httpStatus = httpStatus;
   }
 }
 

@@ -3,7 +3,7 @@
  * (inconsistent capitalization, mixed numeric/string codes) and expose a
  * normalized model while keeping the raw object available.
  */
-import { MalformedResponseError, GatewayError } from "./errors.js";
+import { MalformedResponseError, GatewayError, TransportError } from "./errors.js";
 
 export type RawResponse = Record<string, unknown>;
 
@@ -41,6 +41,32 @@ export interface RefundResult {
   /** Normalized errorCode; always "0" here since non-zero codes throw. */
   errorCode: "0";
   raw: RawResponse;
+}
+
+/**
+ * Interpret an HTTP exchange. 2xx bodies must be JSON objects. Non-2xx bodies
+ * are still inspected: SATIM answers an unknown order on
+ * acknowledgeTransaction.do with HTTP 401 and the JSON string
+ * "Transaction is not found" (live-observed, 22 September 2026), which is a
+ * gateway rejection, not a transport failure.
+ */
+export function interpretHttpResponse(operation: GatewayError["operation"], status: number, bodyText: string): RawResponse {
+  if (status >= 200 && status < 300) return parseJsonObject(bodyText);
+  let value: unknown;
+  try {
+    value = JSON.parse(bodyText);
+  } catch {
+    value = undefined;
+  }
+  if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+    const raw = value as RawResponse;
+    const code = normalizeCode(pick(raw, "errorCode"));
+    if (code !== undefined) throw new GatewayError(operation, code, toText(pick(raw, "errorMessage")), raw, status);
+  }
+  if (typeof value === "string" && value.trim() !== "") {
+    throw new GatewayError(operation, `http_${status}`, value, { httpStatus: status, body: value }, status);
+  }
+  throw new TransportError("http-status", `gateway responded with HTTP ${status}`, { status, bodyText });
 }
 
 /** Parse the response body text as a JSON object. */
@@ -95,7 +121,8 @@ function toDigits(value: unknown): string | undefined {
 }
 
 function toText(value: unknown): string | undefined {
-  if (typeof value === "string") return value;
+  // SATIM returns "" for fields that do not apply yet (e.g. Pan before payment); treat as absent.
+  if (typeof value === "string") return value === "" ? undefined : value;
   if (typeof value === "number") return String(value);
   return undefined;
 }

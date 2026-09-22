@@ -18,7 +18,7 @@ export type {
 export { MINIMUM_REGISTER_AMOUNT_MINOR } from "./requests.js";
 
 export type { RegisterResult, AcknowledgeResult, RefundResult, RawResponse } from "./responses.js";
-export { normalizeCode } from "./responses.js";
+export { normalizeCode, interpretHttpResponse } from "./responses.js";
 
 export {
   WathiqPayError,

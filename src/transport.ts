@@ -50,11 +50,8 @@ export function createFetchTransport(fetchImpl: FetchLike = globalThis.fetch as 
     } catch (cause) {
       throw new TransportError("network", "response body could not be read", { cause });
     }
-    if (response.status < 200 || response.status >= 300) {
-      throw new TransportError("http-status", `gateway responded with HTTP ${response.status}`, {
-        status: response.status,
-      });
-    }
+    // Non-2xx statuses are returned, not thrown: SATIM answers some
+    // documented gateway errors with HTTP 401 and a JSON body (live-observed).
     return { status: response.status, bodyText };
   };
 }

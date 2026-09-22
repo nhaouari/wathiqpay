@@ -55,7 +55,7 @@ describe("real fetch transport against the local simulator", () => {
   test("wrong credentials surface as GatewayError 5 and unknown order as 6", async () => {
     const bad = createClient({ environment: "simulator", baseUrl: sim.baseUrl, ...creds, password: "wrong" });
     await assert.rejects(bad.registerOrder(order("CMD000003")), (e: unknown) => e instanceof GatewayError && e.errorCode === "5");
-    await assert.rejects(client.acknowledgeTransaction("NOPE"), (e: unknown) => e instanceof GatewayError && e.errorCode === "6");
+    await assert.rejects(client.acknowledgeTransaction("NOPE"), (e: unknown) => e instanceof GatewayError && e.errorCode === "http_401" && e.httpStatus === 401 && e.errorMessage === "Transaction is not found");
   });
 });
 

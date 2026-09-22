@@ -1,6 +1,6 @@
 # WathiqPay open-source SDK plan
 
-Date: 17 September 2026 (revision 5). Status: Milestones A–D implemented offline (52 tests: unit, contract, tarball consumer, merchant journey; CI workflow). Reference merchant in `examples/reference-merchant/`. First live attempt made; see [live-evidence.md](docs/live-evidence.md). Certification and production readiness remain separate gates.
+Date: 22 September 2026 (revision 6). Status: Milestones A–D implemented offline; Milestone E started with live registration and acknowledgement passing (52 tests: unit, contract, tarball consumer, merchant journey; CI workflow). Reference merchant in `examples/reference-merchant/`. First live attempt made; see [live-evidence.md](docs/live-evidence.md). Certification and production readiness remain separate gates.
 
 ## Recommendation
 
@@ -165,17 +165,17 @@ Exit: a contributor can run the complete synthetic journey locally (`npm run dem
 
 ### Milestone E — Test against SATIM certification
 
-- [ ] Confirm the merchant account is enabled, the testing slot is usable, and credentials/terminal permissions work. These are mandatory entry conditions for E, tracked since A. The observed portal showed an active slot but a disabled merchant-user label; neither alone proves working API access.
+- [x] Confirm the merchant account is enabled, the testing slot is usable, and credentials/terminal permissions work. These are mandatory entry conditions for E, tracked since A. Confirmed 22 September 2026. The observed portal showed an active slot but a disabled merchant-user label; neither alone proves working API access.
   - 2026-09-17: live registration returned `errorCode 5 Access denied` over GET and POST on both certification hosts. Account-side blocker; SDK transport confirmed compatible at the HTTP level. Details in [live-evidence.md](docs/live-evidence.md).
 - [ ] Verify that the reference merchant matches the submission scope agreed during the parallel track before running formal qualification scenarios.
 - [ ] Use explicit opt-in commands and local secrets for live tests, separate from ordinary CI.
-- [ ] Run the reference merchant against certification and verify POST form encoding and actual response shapes.
+- [x] Run the reference merchant against certification and verify POST form encoding and actual response shapes. Registration and pre-payment acknowledgement verified 22 September 2026; see [live-evidence.md](docs/live-evidence.md).
 - [ ] Complete hosted payment entry manually with SATIM test data; exercise CAPTCHA/3-D Secure through the approved flow.
 - [ ] Run each applicable scenario in [certification-checklist.md](docs/certification-checklist.md).
 - [ ] Verify acknowledgement behavior and abandoned-browser recovery with SATIM's documented guidance; do not assume acknowledgement is a harmless polling endpoint.
 - [ ] Verify refunds separately using refundable certification orders and approved amounts.
 - [ ] Record SDK commit/version, scenario, observed response shape, expected result, actual result, and evidence reference.
-- [ ] Convert useful findings into sanitized regression fixtures after removing account/customer data.
+- [x] Convert useful findings into sanitized regression fixtures after removing account/customer data. First three live fixtures added (register success, unpaid acknowledgement, unknown-order 401).
 
 Exit: live results support each advertised capability; unresolved scenarios remain explicitly unsupported or experimental.
 

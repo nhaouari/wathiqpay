@@ -41,6 +41,8 @@ Content-Type: application/x-www-form-urlencoded
 
 Production hostnames are not documented in the accessible portal and must remain explicit configuration until SATIM supplies them.
 
+Live-observed on 22 September 2026: the API host `test2.satim.dz` accepts POST form encoding, while the returned `formUrl` points at `https://test.satim.dz/payment/epg/merchants/<merchant>/payment.html?mdOrder=…&language=fr`. The hosted page and the API are on different hosts.
+
 ### Authentication
 
 Every documented operation sends merchant credentials as parameters:
@@ -194,6 +196,8 @@ Important details:
 - `approvalCode`/`authorizationResponseId` is the six-character authorization code.
 - `Amount` and `depositAmount` are minor units.
 - Field capitalization is inconsistent (`ErrorCode`, `OrderStatus`, `Pan` versus lower-camel-case fields). The SDK parser must follow the wire representation and expose a normalized public model separately.
+
+Live-observed on 22 September 2026: before any payment attempt the response is `{"depositAmount":0,"currency":"012","actionCode":-100,"actionCodeDescription":"No payment attempted yet.","ErrorCode":"0","ErrorMessage":"Success","OrderStatus":0,"OrderNumber":"…","Pan":"","Amount":5000,"Description":"…"}`. An unknown `mdOrder` is answered with HTTP 401 and the JSON string `"Transaction is not found"` rather than an `ErrorCode 6` object.
 
 ### Documented acknowledgement errors
 
