@@ -1,10 +1,11 @@
 import { useEffect } from "react";
 
 const DEMO = "https://demo.wathiqpay.com";
-const REPO = "https://github.com/nhaouari/wathiqpay";
-const UPDATED = "22 septembre 2026";
+const UPDATED = "23 septembre 2026";
 
-const code = `import { createClient, classifyPayment } from "wathiqpay";
+const code = `import {
+  createClient, classifyPayment, paymentMatchesOrder
+} from "wathiqpay";
 
 const satim = createClient({
   environment: "certification",
@@ -27,15 +28,19 @@ const order = await satim.registerOrder({
 const payment =
   await satim.acknowledgeTransaction(order.orderId);
 
-if (classifyPayment(payment) === "paid") {
+const matches = paymentMatchesOrder(payment, {
+  orderNumber: "CMD000123",
+  amount: { value: "806.50", currency: "DZD" },
+});
+if (classifyPayment(payment) === "paid" && matches.matches) {
   // livrer la commande, une seule fois
 }`;
 
 const steps = [
   { state: "done", title: "Dossier de certification déposé et accepté", text: "Demande « Certifier mon module » sur CIBWeb, jugée recevable par le GIE Monétique." },
   { state: "done", title: "Accès à la plateforme de test SATIM", text: "Compte marchand et terminal de certification activés." },
-  { state: "done", title: "Module et site de démonstration terminés", text: "Enregistrement, confirmation, remboursements, reçus en français, arabe et anglais." },
-  { state: "done", title: "Les 15 cartes de test passées", text: "11 donnent le résultat attendu. 4 cartes se comportent autrement que prévu côté SATIM ; nous les avons signalées." },
+  { state: "done", title: "Parcours de paiement et reçus disponibles", text: "Enregistrement, confirmation, remboursements et reçus PDF en français, arabe et anglais. L’envoi des reçus par e-mail est différé." },
+  { state: "now", title: "15 scénarios de cartes examinés", text: "11 résultats attendus, 3 approbations inattendues et 1 scénario impossible à saisir. Ces quatre points restent à clarifier avec SATIM." },
   { state: "now", title: "Séance de qualification avec SATIM", text: "À réserver. Le qualificateur teste notre site et rédige le procès-verbal." },
   { state: "next", title: "Certificat du GIE Monétique", text: "Délivré après le procès-verbal, puis référencement du module sur CIBWeb." },
 ];
@@ -44,29 +49,29 @@ const journey = [
   { img: "/shots/boutique.webp", alt: "Catalogue de la boutique de démonstration Maison Wathiq", title: "Le client choisit ses articles", text: "Sur votre site, comme d'habitude." },
   { img: "/shots/satim.webp", alt: "Page de paiement SATIM avec les logos CIB et Algérie Poste", title: "Il paie sur la page de SATIM", text: "La carte n'est jamais saisie chez vous. SATIM gère le 3-D Secure." },
   { img: "/shots/recu.webp", alt: "Page de confirmation avec le reçu de paiement", title: "Il revient avec un reçu", text: "Votre serveur a d'abord confirmé le paiement auprès de SATIM." },
-  { img: "/shots/recu-ar.webp", pos: "top right", alt: "Reçu de paiement au format PDF en arabe", title: "Reçu PDF, aussi en arabe", text: "Français, arabe et anglais, de la boutique jusqu'au reçu." },
+  { img: "/shots/recu-ar.webp", pos: "top right", alt: "Reçu de paiement au format PDF en arabe", title: "Reçu PDF, aussi en arabe", text: "Reçus disponibles en trois langues. Certains messages de refus fournis par SATIM restent en anglais." },
 ];
 
 const does = [
   ["Montants exacts", "806,50 DA devient 80650 sans arrondi ni virgule flottante."],
   ["Confirmation côté serveur", "Un paiement n'est accepté que si SATIM renvoie respCode 00, ErrorCode 0 et OrderStatus 2, avec le bon montant et le bon numéro de commande."],
-  ["Jamais deux fois", "Un client qui recharge la page ou revient deux fois ne déclenche qu'une seule livraison."],
+  ["Protection contre les doublons", "La boutique de référence ne déclenche qu’une seule validation de commande malgré les retours répétés. Votre intégration doit conserver cette protection."],
   ["Remboursements", "Totaux ou partiels, testés sur la plateforme SATIM."],
   ["Pas de relance automatique", "Si SATIM ne répond pas, le module ne rejoue pas l'opération : il vous dit que le résultat est incertain."],
-  ["Aucune donnée de carte", "Ni numéro, ni CVV, ni mot de passe ne passent par votre serveur. Les identifiants sont masqués dans les journaux."],
+  ["Saisie de carte chez SATIM", "Le numéro complet, le CVV et le mot de passe sont saisis sur la page SATIM. Les réponses peuvent contenir un numéro masqué ; les données sensibles sont filtrées dans les journaux."],
 ];
 
 const results = [
-  ["Cartes de test SATIM", "15 passées", "11 conformes, 4 signalées à SATIM"],
-  ["Contrôles du site marchand", "16 sur 16", "CAPTCHA, conditions, langues, reçus, sécurité des retours"],
+  ["Scénarios de cartes SATIM", "11 / 15 attendus", "3 approbations inattendues et 1 scénario non exécutable"],
+  ["Contrôles du site marchand", "Journal disponible", "Parcours, reçus et sécurité des retours ; réserves de langue et e-mail documentées"],
   ["Remboursements", "3 sur 3", "Partiel, total, refus au-delà du montant"],
-  ["Tests automatisés du code", "63", "Exécutés à chaque modification, sous Node.js 22 et 24"],
+  ["Tests automatisés du code", "Suite de régression", "Vérification locale et workflow CI configuré pour Node.js 22 et 24"],
 ];
 
-function Mark({ state }) {
-  if (state === "done") return <span className="mark done" aria-label="Fait">✓</span>;
-  if (state === "now") return <span className="mark now" aria-label="En cours" />;
-  return <span className="mark next" aria-label="À venir" />;
+function mark(state) {
+  if (state === "done") return <span className="mark done"><span aria-hidden="true">✓</span><span className="sr-only">Fait : </span></span>;
+  if (state === "now") return <span className="mark now"><span className="sr-only">En cours : </span></span>;
+  return <span className="mark next"><span className="sr-only">À venir : </span></span>;
 }
 
 export default function Landing() {
@@ -87,6 +92,7 @@ export default function Landing() {
 
   return (
     <div className="page">
+      <a className="skip-link" href="#contenu">Aller au contenu principal</a>
       <header className="top">
         <div className="wrap top-row">
           <a className="brand" href="/">
@@ -97,32 +103,43 @@ export default function Landing() {
             <a href="#avancement">Avancement</a>
             <a href="#marchands">Pour les marchands</a>
             <a href="#contact">Contact</a>
-            <a className="nav-code" href={REPO} target="_blank" rel="noreferrer">GitHub</a>
           </nav>
         </div>
       </header>
 
-      <main>
+      <main id="contenu" tabIndex={-1}>
         <section className="hero wrap">
           <div className="hero-text">
             <p className="status-chip"><span className="dot" /> Certification SATIM en cours · mis à jour le {UPDATED}</p>
-            <h1>Le paiement par carte CIB et Edahabia, branché proprement sur votre site.</h1>
+            <h1>Acceptez CIB et Edahabia. Gardez la main sur votre intégration.</h1>
             <p className="lede">
-              WathiqPay est un module Node.js qui relie votre site marchand à la plateforme de paiement SATIM.
-              Il s'occupe des détails qui font perdre des semaines : montants, confirmation du paiement,
-              remboursements, reçus. Le code est public, et chaque affirmation de cette page se vérifie.
+              Ne repartez pas de zéro pour intégrer le paiement. WathiqPay réunit les échanges avec SATIM,
+              la vérification des paiements et les remboursements dans un module installé sur votre serveur.
+              Votre équipe se concentre sur votre boutique, pas sur chaque détail du protocole.
             </p>
-            <p className="ar" lang="ar" dir="rtl">الدفع ببطاقة CIB والذهبية على موقعك، بطريقة سليمة وواضحة.</p>
+            <p className="ar" lang="ar" dir="rtl">اقبل الدفع ببطاقة CIB والذهبية، واحتفظ بالتحكم في التكامل على خادمك.</p>
+            <p className="fine"><strong>Sans abonnement WathiqPay pour utiliser le module.</strong> Vos frais bancaires et votre hébergement restent distincts. Logiciel propriétaire en version alpha ; certification en cours.</p>
             <div className="actions">
               <a className="btn primary" href={DEMO} target="_blank" rel="noreferrer">Essayer la boutique de démonstration</a>
-              <a className="btn" href={REPO} target="_blank" rel="noreferrer">Lire le code</a>
+              <a className="btn" href="#contact">Discuter de votre intégration</a>
             </div>
-            <p className="fine">La démonstration fonctionne sur l'environnement de test de SATIM : aucun paiement réel.</p>
+            <p className="fine">Démonstration en environnement de certification : aucune livraison réelle. Utilisez uniquement les cartes de test fournies par SATIM, jamais votre carte personnelle.</p>
           </div>
           <figure className="code-card">
-            <figcaption>Ce que vous écrivez, en tout et pour tout</figcaption>
-            <pre><code>{code}</code></pre>
+            <figcaption>Extrait serveur simplifié, pas une intégration complète</figcaption>
+            <pre tabIndex={0} aria-label="Exemple de code Node.js"><code>{code}</code></pre>
           </figure>
+        </section>
+
+        <section className="wrap" aria-labelledby="benefices">
+          <h2 id="benefices">Moins de travail technique. Plus de maîtrise.</h2>
+          <dl className="does">
+            <div><dt>Une base déjà développée et testée</dt><dd>Réutilisez les contrôles de montant, la confirmation côté serveur et la gestion des erreurs. Vous évitez de reconstruire ces mécanismes pour chaque projet.</dd></div>
+            <div><dt>Pas d’abonnement au module</dt><dd>L’utilisation de WathiqPay ne nécessite pas d’abonnement récurrent. Les conditions d’acquisition et les éventuelles prestations sont à préciser dans votre offre ; les frais de votre banque restent applicables.</dd></div>
+            <div><dt>Votre serveur, votre relation bancaire</dt><dd>Le module communique avec SATIM depuis votre infrastructure. Aucun service hébergé par WathiqPay n’est nécessaire au traitement des paiements, et WathiqPay ne collecte pas vos fonds.</dd></div>
+          </dl>
+          <p className="section-lede">Une fois certifié et référencé, le module pourra s’inscrire dans le parcours CIBWeb prévu pour les marchands utilisant un module déjà certifié. Votre dossier, les tests requis et l’activation bancaire restent nécessaires : aucun délai d’acceptation n’est garanti.</p>
+          <p className="band-cta"><a href="#contact">Parlons de votre site et de votre intégration</a></p>
         </section>
 
         <section id="parcours" className="band">
@@ -154,7 +171,7 @@ export default function Landing() {
           <ol className="steps">
             {steps.map((s) => (
               <li key={s.title} className={s.state}>
-                <Mark state={s.state} />
+                {mark(s.state)}
                 <div>
                   <h3>{s.title}</h3>
                   <p>{s.text}</p>
@@ -191,17 +208,17 @@ export default function Landing() {
             </table>
           </div>
           <p className="fine">
-            Le détail de chaque essai, avec les références de commande et les réponses de SATIM, est publié dans le{" "}
-            <a href={`${REPO}/blob/main/docs/live-evidence.md`} target="_blank" rel="noreferrer">journal des tests</a>.
+            Ce tableau résume les essais réalisés et les réserves encore ouvertes. Pour une question sur les tests ou votre intégration, <a href="#contact">contactez-nous</a>.
           </p>
         </section>
 
         <section id="marchands" className="band">
           <div className="wrap two-col">
             <div>
-              <h2>Pour les marchands</h2>
+              <h2>Votre boutique. Votre banque. Votre module.</h2>
               <p className="section-lede">
-                WathiqPay est un logiciel, pas un intermédiaire financier. Nous ne touchons pas à votre argent.
+                Une intégration directe pour les marchands qui veulent garder leur infrastructure et leur relation bancaire.
+                Vous choisissez un module logiciel, pas un service de collecte de vos ventes.
               </p>
             </div>
             <div className="merchant">
@@ -209,28 +226,29 @@ export default function Landing() {
               <ul>
                 <li>Votre banque, votre contrat et votre compte : les paiements arrivent directement chez vous.</li>
                 <li>Vos identifiants SATIM et votre terminal.</li>
-                <li>Votre autorisation auprès du GIE Monétique, obtenue avec un module référencé.</li>
+                <li>Votre autorisation auprès du GIE Monétique : le module WathiqPay n’est pas encore référencé.</li>
               </ul>
-              <h3>Ce qu'il vous faut</h3>
+              <h3>Ce qu’il vous faut</h3>
               <ul>
-                <li>Un registre du commerce ou de l'artisanat.</li>
-                <li>L'inscription au fichier national des e-fournisseurs (code e-commerce, CNRC).</li>
+                <li>Un registre du commerce ou de l’artisanat.</li>
+                <li>L’inscription au fichier national des e-fournisseurs (code e-commerce, CNRC).</li>
                 <li>Une banque domiciliataire membre du GIE Monétique.</li>
               </ul>
-              <p className="fine">Nous pouvons vous accompagner dans ces démarches une fois le module certifié.</p>
+              <p className="fine">Conditions publiées par le <a href="https://www.cibweb.dz/fr/">GIE Monétique sur CIBWeb</a>. L’éligibilité du marchand et l’activation par sa banque restent distinctes de la certification du module. Pour un statut d’auto-entrepreneur, demandez une confirmation écrite au GIE.</p>
             </div>
           </div>
         </section>
 
         <section id="contact" className="wrap contact">
           <div>
-            <h2>Être prévenu à la certification</h2>
+            <h2>Préparez votre intégration dès maintenant</h2>
             <p className="section-lede">
-              Laissez votre adresse : nous vous écrirons une seule fois, le jour où le certificat sera délivré.
-              Pour une question sur l'intégration, le même formulaire nous parvient directement.
+              Présentez votre site, votre technologie et l’avancement de votre dossier marchand pour discuter de l’intégration et des conditions d’acquisition du module.
+              Ne transmettez ni données de carte, ni mot de passe, ni identifiants SATIM.
             </p>
           </div>
           <div className="form-box">
+            <p className="fine">Formulaire hébergé par Tally. Si le formulaire ne s’affiche pas, <a href="https://tally.so/r/3yav5p">ouvrez le formulaire de contact directement</a>. Consultez la <a href="https://tally.so/help/privacy-policy">politique de confidentialité de Tally</a> avant de transmettre vos coordonnées.</p>
             <iframe
               data-tally-src="https://tally.so/embed/3yav5p?alignLeft=1&hideTitle=1&transparentBackground=1&dynamicHeight=1"
               loading="lazy"
@@ -244,8 +262,8 @@ export default function Landing() {
 
       <footer className="foot">
         <div className="wrap foot-row">
-          <p>WathiqPay · <a href={REPO} target="_blank" rel="noreferrer">github.com/nhaouari/wathiqpay</a></p>
-          <p>CIB, Edahabia, SATIM et GIE Monétique sont des marques de leurs propriétaires. WathiqPay n'est pas affilié à SATIM.</p>
+          <p>WathiqPay · Logiciel propriétaire · <a href="#contact">Contact</a></p>
+          <p>CIB, Edahabia, SATIM et GIE Monétique sont des marques de leurs propriétaires. WathiqPay n’est pas affilié à SATIM.</p>
         </div>
       </footer>
     </div>

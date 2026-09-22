@@ -32,7 +32,7 @@ Our module-certification application on CIBWeb has been accepted and integration
 1. Eligibility. Is a server-side npm package (no bundled UI) eligible as the certified "module", provided it is accompanied by a reference merchant website demonstrating the full checkout, receipt, and error requirements?
 2. Boundary. Which elements will the certificate cover: the package name and version, the reference merchant application, the required UI components, and/or a specific configuration?
 3. Versions. Which kinds of updates require recertification (bug fixes, new features, changes to the reference UI)? What are the certificate's duration and renewal process?
-4. Open-source distribution. The module will be published free of charge under an open-source licence. How should merchant licence-authentication requests be validated in that case, and what identifier should a merchant supply when applying under the referenced-module (Type 1) path?
+4. Proprietary distribution. WathiqPay is a proprietary module, not an open-source distribution. How should merchant licence-authentication requests be validated, and what identifier should a merchant supply when applying under the referenced-module (Type 1) path?
 5. Evidence. What evidence must we retain from qualification, and what remains to be tested during a merchant's bank production activation?
 
 Cordialement,

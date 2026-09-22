@@ -125,6 +125,6 @@ Findings before 22 September 2026:
 
 ## Next live step
 
-The public HTTPS journey and refund runs are complete as recorded above. Next: deploy the locally verified refund-display and unknown-balance fixes, repeat the affected checks, and capture the deployment identifier. Resolve the two limit scenarios, expired-card approval, and unavailable expiry with SATIM. The CVV-driver issue was withdrawn and must not be raised as a gateway defect.
+The public HTTPS journey and refund runs are complete as recorded above; deployment 6472e50 includes the receipt and refund fixes. Resolve the two limit scenarios, expired-card approval, and unavailable expiry with SATIM. The CVV-driver issue was withdrawn and must not be raised as a gateway defect. Later local edits require their own deployment verification.
 
-Arabic PDF rendering remains incomplete (French fallback); the existing PDF download pass does not establish Arabic-language compliance. Email delivery is deferred at the owner's request, not passed or waived by SATIM. See `certification-day.md` for the remaining handoff gates.
+Arabic PDF rendering was implemented and visually verified on deployment 6472e50. Email delivery is deferred at the owner's request, not passed or waived by SATIM. See `certification-day.md` for the remaining handoff gates.

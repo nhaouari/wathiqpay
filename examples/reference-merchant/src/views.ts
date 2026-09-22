@@ -12,9 +12,14 @@ const css = `
 --serif:"Fraunces","Noto Naskh Arabic",Georgia,"Times New Roman",serif;--sans:"Inter","Noto Sans Arabic",system-ui,-apple-system,"Segoe UI",sans-serif}
 *{box-sizing:border-box}html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;font-feature-settings:"tnum" 1,"cv11" 1}
+:root{--ink-2:#403A32;--blue:#143B64;--ok:#245330;--ko:#802323;--hold:#654100}
 [dir=rtl] body,[dir=rtl]{font-family:var(--sans)}
 a{color:var(--blue);text-decoration-thickness:1px;text-underline-offset:3px}a:hover{color:var(--blue-ink)}
-:focus-visible{outline:3px solid var(--saffron);outline-offset:2px;border-radius:2px}
+:focus-visible{outline:3px solid #221E19;outline-offset:4px;box-shadow:0 0 0 4px #fff;border-radius:2px}
+.skip-link{position:fixed;top:8px;inset-inline-start:8px;z-index:100;background:#fff;color:#221E19;padding:12px;transform:translateY(-200%)}.skip-link:focus{transform:translateY(0)}
+.test-banner{background:#143B64;color:#fff;padding:1rem;border-bottom:4px solid #D99A17}.test-banner p{margin:.35rem 0 0;max-width:80ch}.test-banner strong{font-size:1.15rem}.demo-reminder{padding:1rem;border:2px solid #143B64;background:#F4EDDD;color:#221E19;margin:1rem 0}
+main:focus{outline:none}nav a,.lang strong{display:inline-flex;min-width:44px;min-height:44px;align-items:center;justify-content:center}
+input,button,.btn{min-height:44px}input[type=checkbox]{min-height:24px;min-width:24px}p,dd,td{overflow-wrap:anywhere}
 .wrap{max-width:68rem;margin:0 auto;padding:0 clamp(1rem,4vw,2.5rem)}
 header{border-bottom:1px solid var(--rule);background:var(--paper)}header .wrap{display:flex;align-items:baseline;gap:2rem;padding-block:1.1rem}
 .wordmark{font-family:var(--serif);font-size:1.6rem;font-weight:600;letter-spacing:-.01em;color:var(--ink);text-decoration:none}
@@ -36,6 +41,7 @@ p{margin:.3rem 0 1rem;max-width:62ch}.lede{color:var(--ink-2);font-size:1.05rem;
 /* controls */
 input[type=number]{width:4.2rem;padding:.5rem .4rem;border:1px solid var(--rule);border-radius:4px;background:#fff;font:inherit;text-align:center}
 input[type=email],input[type=text]{padding:.6rem .7rem;border:1px solid var(--rule);border-radius:4px;background:#fff;font:inherit;width:100%}
+input[type=number],input[type=email],input[type=text]{border-color:#776C5B}
 label{display:block}.field{margin:0 0 1.1rem;max-width:26rem}.field span{display:block;font-size:.9rem;color:var(--ink-2);margin-bottom:.3rem}
 button,.btn{font:inherit;font-weight:600;padding:.6rem 1rem;border-radius:4px;border:1px solid var(--blue);background:var(--blue);color:#fff;cursor:pointer;text-decoration:none;display:inline-block;line-height:1.3}
 button:hover,.btn:hover{background:var(--blue-ink);border-color:var(--blue-ink);color:#fff}
@@ -73,7 +79,7 @@ small,.note{color:var(--ink-2);font-size:.85rem}
 @media print{header,.actions,form,.no-print{display:none}body{background:#fff}.receipt{background:#fff;border:1px solid #999}.receipt:after{display:none}}
 `;
 
-const fonts = `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=Noto+Naskh+Arabic:wght@400;500;600&family=Noto+Sans+Arabic:wght@400;500;600&display=swap">`;
+const fonts = `<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23143B64'/%3E%3Ctext x='16' y='23' text-anchor='middle' fill='white' font-size='22'%3EW%3C/text%3E%3C/svg%3E"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=Noto+Naskh+Arabic:wght@400;500;600&family=Noto+Sans+Arabic:wght@400;500;600&display=swap">`;
 
 const cardMark = `<span class="cards"><img src="/images/cib-edahabia.jpg" width="1143" height="110" alt="CIB · Edahabia"></span>`;
 
@@ -81,18 +87,29 @@ export interface Ctx {
   lang: Lang;
   cartCount: number;
   current?: string;
+  mode?: "simulator" | "certification" | "production";
+  emailEnabled?: boolean;
 }
+
+const demoCopy = {
+  FR: { title: "DÉMONSTRATION — PAS UNE BOUTIQUE RÉELLE", text: "Les articles, prix et commandes servent uniquement à tester WathiqPay. Aucun achat ni aucune livraison réels. Utilisez uniquement les cartes de test SATIM, jamais votre carte personnelle, et des coordonnées fictives.", pay: "Tester le paiement", catalog: "Catalogue de démonstration : aucun article n’est réellement vendu ou livré." },
+  EN: { title: "DEMO — NOT A REAL STORE", text: "Products, prices and orders are only for testing WathiqPay. No real purchases or deliveries. Use only SATIM test cards, never your personal card, and fictional contact details.", pay: "Test payment", catalog: "Demo catalog: no products are actually sold or delivered." },
+  AR: { title: "عرض تجريبي — ليس متجرًا حقيقيًا", text: "المنتجات والأسعار والطلبات مخصصة لاختبار WathiqPay فقط. لا توجد مشتريات أو عمليات توصيل فعلية. استخدم بطاقات اختبار SATIM فقط، وليس بطاقتك الشخصية، وبيانات اتصال وهمية.", pay: "اختبار الدفع", catalog: "كتالوج تجريبي: لا يتم بيع المنتجات أو توصيلها فعليًا." },
+};
+const isDemo = (ctx: Ctx) => ctx.mode === "simulator" || ctx.mode === "certification";
 
 export function layout(ctx: Ctx, title: string, body: string): string {
   const t = messages[ctx.lang];
   const current = ctx.current ?? "/";
+  const skip = { FR: "Aller au contenu principal", EN: "Skip to main content", AR: "انتقل إلى المحتوى الرئيسي" }[ctx.lang];
+  const demo = demoCopy[ctx.lang];
   const langLinks = (["FR", "AR", "EN"] as Lang[])
-    .map((l) => (l === ctx.lang ? `<strong>${l}</strong>` : `<a href="/lang/${l}?next=${encodeURIComponent(current)}">${l}</a>`))
+    .map((l) => (l === ctx.lang ? `<strong lang="${l.toLowerCase()}" aria-current="true">${l}</strong>` : `<a lang="${l.toLowerCase()}" hreflang="${l.toLowerCase()}" href="/lang/${l}?next=${encodeURIComponent(current)}">${l}</a>`))
     .join("");
   return `<!doctype html><html lang="${ctx.lang.toLowerCase()}" dir="${t.dir}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)} – ${esc(t.shopTitle)}</title>${fonts}<style>${css}</style></head>
-<body><header><div class="wrap"><a class="wordmark" href="/">${esc(t.shopTitle)}</a>
+<body><a class="skip-link" href="#main">${skip}</a>${isDemo(ctx) ? `<aside class="test-banner" aria-label="${esc(demo.title)}"><div class="wrap"><strong>${esc(demo.title)}</strong><p>${esc(demo.text)}</p></div></aside>` : ""}<header><div class="wrap"><a class="wordmark" href="/">${esc(t.shopTitle)}${isDemo(ctx) ? " · DEMO" : ""}</a>
 <nav><a href="/">${esc(t.shop)}</a><a href="/orders">${esc(t.myOrders)}</a><a href="/cart">${esc(t.cart)}<span class="count">${ctx.cartCount}</span></a><span class="lang">${langLinks}</span></nav></div></header>
-<main><div class="wrap">${body}</div></main></body></html>`;
+<main id="main" tabindex="-1"><div class="wrap">${body}</div></main></body></html>`;
 }
 
 function addForm(t: (typeof messages)["FR"], p: Product): string {
@@ -109,7 +126,7 @@ export function catalogPage(ctx: Ctx, notice?: string): string {
     ctx,
     t.catalog,
     `${notice ? `<p class="alert good" role="status">${esc(notice)}</p>` : ""}
-<h1>${esc(t.catalog)}</h1><p class="lede">${esc(t.tagline)}</p>
+<h1>${esc(t.catalog)}</h1><p class="lede">${esc(isDemo(ctx) ? demoCopy[ctx.lang].catalog : t.tagline)}</p>
 <section class="lead"><span class="art">${productImg(lead!, ctx.lang, "(max-width: 52rem) 100vw, 55vw")}</span><div><h2>${esc(lead!.name[ctx.lang])}</h2><p>${esc(lead!.blurb[ctx.lang])}</p><div class="money">${esc(formatAmount(lead!.priceMinor, ctx.lang))}</div>${addForm(t, lead!)}</div></section>
 <section class="list">${items}</section>`,
   );
@@ -178,10 +195,11 @@ export function checkoutPage(ctx: Ctx, cart: { lines: PricedLine[]; totalMinor: 
   <label class="field"><span>${esc(t.fullName)}</span><input type="text" name="name" value="${esc(opts.customer?.name ?? "")}" required autocomplete="name" maxlength="80"></label>
   <label class="field"><span>${esc(t.phone)}</span><input type="text" name="phone" value="${esc(opts.customer?.phone ?? "")}" required autocomplete="tel" inputmode="tel" placeholder="${esc(t.phoneHint)}"></label>
   <label class="field"><span>${esc(t.address)}</span><input type="text" name="address" value="${esc(opts.customer?.address ?? "")}" autocomplete="street-address" maxlength="200"></label>
-  <label class="field"><span>${esc(t.customerEmail)}</span><input type="email" name="email" value="${esc(opts.customer?.email ?? "")}" autocomplete="email"></label>
+  ${ctx.emailEnabled !== false ? `<label class="field"><span>${esc(t.customerEmail)}</span><input type="email" name="email" value="${esc(opts.customer?.email ?? "")}" autocomplete="email"></label>` : ""}
   <div class="terms"><h2>${esc(t.terms)}</h2><p>${esc(t.termsText)}</p><label class="check"><input type="checkbox" name="terms" value="yes" required><span>${esc(t.acceptTerms)}</span></label></div>
   <div class="captcha"><label for="captcha">${esc(t.captcha)} <strong>${esc(captcha.question)}</strong> ?</label><input id="captcha" type="text" name="captcha" required inputmode="numeric" autocomplete="off"><input type="hidden" name="captchaToken" value="${esc(captcha.token)}"></div>
-  <button class="pay" type="submit"><span>${esc(t.payAmount)} <span class="money">${esc(amount)}</span></span>${cardMark}</button>
+  ${isDemo(ctx) ? `<p class="demo-reminder">${esc(demoCopy[ctx.lang].text)}</p>` : ""}
+  <button class="pay" type="submit"><span>${esc(isDemo(ctx) ? demoCopy[ctx.lang].pay : t.payAmount)} <span class="money">${esc(amount)}</span></span>${cardMark}</button>
 </form>
 <aside class="summary"><h2>${esc(t.orderSummary)}</h2><table><tbody>${summaryRows}</tbody><tfoot><tr><th>${esc(t.shipping)}</th><td class="num">${esc(t.shippingFree)}</td></tr></tfoot></table>
 <div class="total"><span>${esc(t.total)}</span><span class="money" id="total">${esc(amount)}</span></div></aside></div>`,

@@ -14,3 +14,5 @@ test/live/out/
 examples/reference-merchant/deploy/.env.deploy
 site/node_modules/
 site/dist/
+.playwright-cli/
+output/playwright/

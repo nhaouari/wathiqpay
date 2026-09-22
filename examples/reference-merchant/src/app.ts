@@ -141,7 +141,7 @@ export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer;
       setCookies.push(`sid=${sid}; Path=/; HttpOnly; SameSite=Lax${config.publicUrl.startsWith("https://") ? "; Secure" : ""}`);
     }
     const session = sid;
-    const ctx = async (): Promise<Ctx> => ({ lang, cartCount: (await store.getCart(session)).reduce((n, l) => n + l.quantity, 0), current: url.pathname + url.search });
+    const ctx = async (): Promise<Ctx> => ({ lang, cartCount: (await store.getCart(session)).reduce((n, l) => n + l.quantity, 0), current: url.pathname + url.search, mode: config.mode, emailEnabled });
     const html = (status: number, body: string, extra: Record<string, string> = {}) => {
       res.writeHead(status, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "set-cookie": setCookies, ...extra });
       res.end(body);

@@ -12,7 +12,7 @@ SlickPay, Chargily Pay, and SofizPay are not merely alternative npm modules. The
 
 The key distinction is not whether the integration runs through a provider's server. It is who contracts with the merchant, who is authorized to acquire or collect the payment, where the funds settle, whether the provider maintains a merchant/customer balance, and who bears refund, dispute, fraud, and payout obligations.
 
-WathiqPay's recommended first position is therefore a software product for merchants that hold their own approved banking/payment relationship. It should not initially pool money, maintain withdrawable balances, or promise merchant payouts. This is a narrower product than the competitors' managed collection offerings, but it is also clearer, cheaper to launch, and better aligned with an open-source npm package.
+WathiqPay's recommended first position is a proprietary software product for merchants that hold their own approved banking/payment relationship. It should not initially pool money, maintain withdrawable balances, or promise merchant payouts. This direct-merchant model is distinct from managed collection offerings.
 
 ## 1. Three operating models
 
@@ -174,7 +174,7 @@ Do not describe any platform as licensed, unlicensed, legal, or illegal based on
 
 ## 7. Recommended WathiqPay position
 
-### Phase 1 — Open-source certified integration software
+### Phase 1 — Proprietary integration software, certification pending
 
 Build and certify a reproducible release of the SDK plus a reference merchant. Each merchant obtains its own CIBWeb authorization, bank/acquirer agreement, credentials, terminal configuration, and production activation. WathiqPay earns revenue independently from the customer's sales proceeds.
 
@@ -190,7 +190,7 @@ Possible revenue:
 - Hosted monitoring, reconciliation, receipts, and operational alerts.
 - Framework-specific adapters and enterprise support agreements.
 
-The open-source core creates trust and adoption. Certification, installation, operations, and support create the paid service. Certification claims must identify the exact tested release; forks and modified versions must not claim to be the certified artifact unless the relevant authority confirms that scope.
+WathiqPay is proprietary. Software licensing, installation, operations, and support are possible commercial services; pricing and contractual terms remain to be defined. Certification claims must identify the exact tested release; modified versions must not claim to be the certified artifact unless the relevant authority confirms that scope.
 
 ### Phase 2 — Hosted software without merchant balances
 
@@ -213,7 +213,7 @@ This phase is a different company-risk profile, not merely another npm feature.
 WathiqPay should not try to beat a collection platform solely on transaction percentage. Its credible advantages are:
 
 - TypeScript-first, strongly typed integration.
-- Open-source and auditable core.
+- Proprietary module with controlled releases and documented test evidence.
 - Reproducible builds and cryptographic package provenance.
 - A clearly identified certified release and controlled compatibility policy.
 - Exact money handling and conservative financial retry behavior.
@@ -261,4 +261,4 @@ Until supported by exact documents, do not claim:
 
 ## 11. Decision
 
-Proceed with the certified open-source SDK and direct-merchant model. Price the commercial service around integration, onboarding, support, maintenance, and optional non-custodial hosted operations. Treat collection and wallet functionality as a later regulated business line requiring a separately documented authorization and partner strategy.
+Pursue certification of the proprietary SDK and the direct-merchant model. Define commercial terms around software licensing, integration, onboarding, support, maintenance, and optional non-custodial hosted operations. Treat collection and wallet functionality as a later regulated business line requiring a separately documented authorization and partner strategy.

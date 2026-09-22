@@ -1,5 +1,7 @@
 # WathiqPay
 
+Proprietary project. WathiqPay is not distributed as open-source software. Third-party components retain their respective licences.
+
 WathiqPay is a server-side TypeScript/Node.js client for the SATIM e-commerce payment gateway (SATIM EPG/IPAY): order registration, hosted-page redirection, server-to-server acknowledgement, and refunds.
 
 Status: `0.1.0-alpha.0`, private, unpublished. The SDK and the reference merchant are complete and tested offline, and registration, acknowledgement, 15 card scenarios, and refunds have been run against SATIM's certification gateway (see [docs/live-evidence.md](docs/live-evidence.md)).

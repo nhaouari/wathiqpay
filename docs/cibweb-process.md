@@ -8,7 +8,7 @@ WathiqPay is intended to be a reusable payment module distributed as an npm pack
 
 This is a material correction to the original plan: module certification is explicitly documented by CIBWeb. What remains unconfirmed is the exact certification scope for a headless npm SDK, accompanying reference application, release versions, and forks.
 
-The open-source software licence and the certificate/licence authentication mentioned by CIBWeb are different concepts. The portal describes licences sold or transferred to merchants and requires the certificate holder to validate those requests. It does not explain how free npm installations map to this process. Do not assume an npm download automatically gives a merchant certified-module status, or that payment for a software licence is necessarily required.
+WathiqPay is proprietary. Its software licence and the certificate/licence authentication mentioned by CIBWeb are distinct concepts. The portal describes licences sold or transferred to merchants and requires the certificate holder to validate those requests. Installing the software does not automatically give a merchant certified-module status.
 
 ## Developer path: certify WathiqPay
 
@@ -95,7 +95,7 @@ The [procedure PDF](https://cibweb.dz/procedure-homologation.pdf) (9 pages, vers
 - **Merchant eligibility** (section VI.a): commercial or craft register *and* registration in the national "E-fournisseurs" file at the CNRC (e-commerce code). Every merchant adopting WathiqPay needs both.
 - **Certification runs in five phases** (section VII): application form on CIBWeb; admissibility decision online; remote online tests of the module on the CMI test platform; test report (PV) by the qualifier and certificate issued by GIE Monétique; referencing on CIBWeb. This matches the eight-step web page.
 - **Certificate validity** (section VII "Décision"): the developer receives an *attestation de certification* valid "for a fixed, renewable period". The duration itself is not stated; ask when the certificate is issued.
-- **Licence validation duty** (note after section VII): the certificate holder must validate, in their CIBWeb session, each request from GIE Monétique to authenticate a certificate licence sold or transferred to a merchant. This is the process draft 2 in [outbound-requests.md](outbound-requests.md) asks about for free distributions.
+- **Licence validation duty** (note after section VII): the certificate holder must validate, in their CIBWeb session, each request from GIE Monétique to authenticate a certificate licence sold or transferred to a merchant. Draft 2 in [outbound-requests.md](outbound-requests.md) asks how to apply this process to WathiqPay's proprietary distribution.
 - **Publication** (section VIII): GIE Monétique publishes granted authorizations, issued certificates, and the contact details of authorized merchants and certified developers on CIBWeb.
 - **Audit** (section IX): GIE Monétique may audit a certified module or an authorized merchant site at any time. Keep the certified release reproducible and the evidence log current.
 - No technical UI or receipt requirements appear in the PDF; those remain on the SATIM portal pages.

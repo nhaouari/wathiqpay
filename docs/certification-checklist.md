@@ -10,7 +10,7 @@ This checklist mirrors the accessible SATIM certification portal and adds backen
 - [ ] Certification and production endpoints have been confirmed in writing.
 - [ ] Merchant server IP allowlisting or certificate requirements have been confirmed.
 - [x] Refund permission is enabled for the intended SATIM user.
-- [ ] Development is complete before reserving the certification date. *Arabic PDF rendering and the approved payment logo remain open.*
+- [ ] Development is complete before reserving the certification date. *Arabic PDFs and payment artwork were deployed and retested at 6472e50; final qualifier requirements and operational gates remain open.*
 - [ ] Certification date is reserved and validated by SATIM.
 
 ## 2. Checkout UI
@@ -22,7 +22,7 @@ This checklist mirrors the accessible SATIM certification portal and adds backen
 - [x] Payment button displays the CIB/Edahabia logo. *Unmodified banner from SATIM's public payment page, deployed and verified 22 September 2026; qualifier acceptance of the layout remains to confirm. See `PAYMENT-ARTWORK.md` in the merchant image directory.*
 - [x] Online-payment terms and product/service sale terms are displayed immediately before payment.
 - [x] Customer must explicitly acknowledge those terms.
-- [ ] Language is consistent across checkout, intermediate pages, SATIM redirect, return page, receipts, and errors. *Arabic PDF labels still fall back to French; some SATIM decline messages arrive in English.*
+- [ ] Language is consistent across checkout, intermediate pages, SATIM redirect, return page, receipts, and errors. *Arabic PDFs were verified at 6472e50; some SATIM decline messages still arrive in English.*
 - [x] SATIM payment page opens as an independent web page, not an embedded merchant frame or mobile WebView.
 
 ## 3. Order registration
