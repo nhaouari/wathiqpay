@@ -1,12 +1,6 @@
-import "./App.css";
-import ArtifactCode from "./ArtifactCode";
+import Landing from "./Landing";
+import "./site.css";
 
-function App() {
-  return (
-    <>
-      <ArtifactCode />
-    </>
-  );
+export default function App() {
+  return <Landing />;
 }
-
-export default App;
