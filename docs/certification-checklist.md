@@ -85,7 +85,7 @@ Use only SATIM-issued certification data stored outside source control.
 - [x] Lost card → payment refused. *(AC 126 / RC 41)*
 - [x] Stolen card → payment refused. *(AC 127 / RC 43)*
 - [x] Incorrect expiry date → payment refused. *(AC 100882 / RC AD)*
-- [ ] Card absent from issuer server → payment refused. *Not testable: hosted page cannot select expiry 01/2025.*
+- [ ] Card absent from issuer server → payment refused. *Not testable: the card number in the portal fails the Luhn checksum, so SATIM's page keeps the Paiement button disabled (the expiry year is selectable).*
 - [ ] Card limit exceeded → payment refused. *Approved at 50.00, 1 200.00 and 2 376 000.00 DZD; SATIM test data to confirm (question 50).*
 - [x] Insufficient balance → payment refused. *(AC 116 / RC 51)*
 - [x] Incorrect CVV2 → payment refused. *(AC 140 / RC AB)*

@@ -36,7 +36,7 @@ Shop: `https://wathiqpay-demo2.vercel.app` (Vercel function in `cdg1`, Turso dat
 | Lost | Paiement refusé: Paiement refusé : carte signalée comme perdue. Veuillez contacter votre banque. Code d'erreur : | refused | Pass |
 | Stolen | Paiement refusé: Paiement refusé : carte signalée comme volée. Veuillez contacter votre banque. Code d'erreur :  | refused | Pass |
 | Incorrect expiration date entry | Paiement refusé: Paiement refusé : date d'expiration incorrecte. Veuillez vérifier les informations et réessayer | refused | Pass |
-| Card no longer exists on issuer server | Card cannot be entered (no past years in the expiry picker) | refused | Not testable |
+| Card no longer exists on issuer server | Card cannot be submitted: its number fails the Luhn checksum, so SATIM's page keeps Paiement disabled | refused | Not testable |
 | Card limit exceeded | Paiement accepté: Votre paiement a été accepté. — retried at 2376000.00 DZD: Paiement accepté | refused | Card approved; SATIM test data to confirm |
 | Insufficient card balance | Paiement refusé: Paiement refusé : fonds insuffisants. Veuillez approvisionner votre compte et réessayer. Code d | refused | Pass |
 | Incorrect CVV2 | Paiement refusé: Paiement refusé : code CVV incorrect. Veuillez vérifier les informations et réessayer. Code d'e | refused | Pass |
@@ -84,7 +84,7 @@ Each scenario registered a fresh 50.00 DZD order through the SDK (999 999.00 DZD
 | Lost | EC=2 OS=6 AC=126 RC=41 → `declined` | — | declined | Pass |
 | Stolen | EC=2 OS=6 AC=127 RC=43 → `declined` | — | declined | Pass |
 | Incorrect expiration date entry | EC=2 OS=6 AC=100882 RC=AD → `declined` | — | declined | Pass |
-| Card no longer exists on issuer server | hosted page refused the entry (year picker has no past years); order stays registered | — | declined | Not testable via hosted page |
+| Card no longer exists on issuer server | hosted page kept Paiement disabled (card number fails the Luhn checksum); order stays registered | — | declined | Not testable via hosted page |
 | Card limit exceeded | EC=2 OS=6 AC=140 RC=AB → `declined` | EC=0 OS=2 AC=0 RC=00 → `paid` | declined | Approved, but a decline was expected |
 | Insufficient card balance | EC=2 OS=6 AC=140 RC=AB → `declined` | EC=2 OS=6 AC=116 RC=51 → `declined` | declined | Pass |
 | Incorrect CVV2 | EC=2 OS=6 AC=140 RC=AB → `declined` | — | declined | Pass |
@@ -101,7 +101,7 @@ Observations from the card runs:
 - Accepted payment: EC "0", OS 2, AC 0, RC "00", `approvalCode` and `authorizationResponseId` both present (6 digits), `depositAmount` equals `Amount`.
 - Issuer declines: EC "2", OS 6, `depositAmount` 0, numeric `actionCode`, alphanumeric `respCode` ("37", "41", "43", "51", "AB", "AD", "AE"). Cards blocked before 3-D Secure (AC 2003) return `params` without any `respCode`; the merchant must fall back to `actionCodeDescription`, as the checklist requires.
 - "Card limit exceeded" and "Terminal/transaction amount limit exceeded" were approved on the second attempt at 50.00 DZD and 999 999.00 DZD respectively. Either the scenario needs a specific amount or the test cards changed; to ask SATIM.
-- "Card no longer exists" (expiry 01/2025) cannot be entered: the hosted page's year picker offers no past years, so the order stays registered. "Expired card" (12/2022) could be selected and was approved; to ask SATIM.
+- "Card no longer exists" (expiry 01/2025) cannot be submitted. *Corrected 23 September 2026:* the year 2025 is selectable; the real cause is that the card number published in the portal fails the Luhn checksum, so SATIM's page keeps the Paiement button disabled even with a future expiry. The order stays registered. "Expired card" (12/2022) could be selected and was approved; to ask SATIM.
 - Refunds on a paid 50.00 order: refund 20.00 → `errorCode "0"`; acknowledgement then shows OS 4 with `depositAmount` 3000. Refund 30.00 → success; OS 4 with `depositAmount` 0. A further 1.00 → `errorCode 7 "Refund is impossible for current transaction state"`. So OS 4 means "a refund happened", and `depositAmount` is what is still captured. The SDK now classifies OS 4 with a non-zero deposit as `partially_refunded`.
 - Acknowledging a paid order twice returned identical bodies.
 

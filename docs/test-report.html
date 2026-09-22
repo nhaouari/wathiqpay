@@ -113,7 +113,7 @@ footer{font-size:.84rem;color:var(--muted);border-top:1px solid var(--rule);padd
           <tr class="flag"><td>Card limit exceeded</td><td class="code">WZJ9HGQGKW<br>WKEEYBJHY5</td><td class="msg">Votre paiement a été accepté. Also accepted at 2 376 000,00 DZD.</td><td>Refused</td><td><span class="pill warn">Approved by SATIM</span></td></tr>
           <tr class="flag"><td>Terminal / transaction amount limit exceeded</td><td class="code">WM6LGVDQLA<br>W8J798JDNR</td><td class="msg">Votre paiement a été accepté. Also accepted at 2 376 000,00 DZD.</td><td>Refused</td><td><span class="pill warn">Approved by SATIM</span></td></tr>
           <tr class="flag"><td>Expired card (expiry 12/2022)</td><td class="code">WSH3JAJ3KF</td><td class="msg">Votre paiement a été accepté.</td><td>Refused</td><td><span class="pill warn">Approved by SATIM</span></td></tr>
-          <tr class="flag"><td>Card no longer exists on issuer server (expiry 01/2025)</td><td class="code">—</td><td class="msg">Not reached. The expiry year 2025 is not offered in the hosted page's year list, so the card cannot be submitted.</td><td>Refused</td><td><span class="pill na">Cannot be entered</span></td></tr>
+          <tr class="flag"><td>Card no longer exists on issuer server (expiry 01/2025)</td><td class="code">—</td><td class="msg">Not reached. The card number fails the standard Luhn checksum, so SATIM's page keeps the Paiement button disabled, whatever the expiry date.</td><td>Refused</td><td><span class="pill na">Cannot be entered</span></td></tr>
         </tbody>
       </table>
     </div>
@@ -169,7 +169,7 @@ footer{font-size:.84rem;color:var(--muted);border-top:1px solid var(--rule);padd
     <ol class="asks">
       <li><strong>Card limit exceeded</strong> and <strong>terminal / transaction amount limit exceeded</strong> were approved at 1 200,00 DZD and at 2 376 000,00 DZD. Which amount or setting should produce the refusal?</li>
       <li><strong>Expired card</strong> (expiry 12/2022) was approved. Is this card still valid for the scenario?</li>
-      <li><strong>Card no longer exists on issuer server</strong> (expiry 01/2025) cannot be entered because 2025 is not in the payment page's year list. Is a replacement card available?</li>
+      <li><strong>Card no longer exists on issuer server</strong> (expiry 01/2025) cannot be submitted: its number fails the Luhn checksum, so the payment page keeps Paiement disabled. Is the number in the portal correct, or is a replacement card available?</li>
       <li>Some refusals (error 2003) and the cancellation arrive with English text only, which then appears on French and Arabic pages. Is a translated message available?</li>
     </ol>
   </section>
