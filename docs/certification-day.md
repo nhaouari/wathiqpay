@@ -4,13 +4,13 @@ Status: not yet ready for an unconditional pass. Local tests are not SATIM certi
 
 ## Before the session
 
-1. Complete Arabic PDF rendering and verify Arabic names, mixed numbers/text, and long receipts visually. Current PDF falls back to French; the browser print receipt is not proof that the downloadable PDF passes.
+1. ~~Arabic PDF rendering~~ Done: Arabic receipts are shaped with HarfBuzz in embedded Noto Sans Arabic, right to left, verified visually on a real Arabic purchase on the deployment (commit `6472e50`, 22 September 2026). Receipts are single-page; an order with many lines is not yet paginated.
 2. Confirm the payment-button layout and rejection wording with SATIM. The generic badge has been replaced with the unmodified CIB/Edahabia banner from SATIM's public payment page (see `examples/reference-merchant/public/images/PAYMENT-ARTWORK.md`). Official-source artwork is installed locally; qualifier acceptance and any language-specific variants remain open.
 3. Ask SATIM to correct or accept the four outstanding card scenarios: card limit, terminal limit, expired card, and missing card whose expiry cannot be selected. Attach redacted order IDs, amounts, timestamps, expected and observed results. Do not include PAN, CVV, passwords, or credentials in the public dossier.
 4. Confirm the certification appointment and that the testing account remains active for it. The previously recorded testing window was 15–25 September 2026; it is not proof of a booked appointment or continued access.
-5. Deploy the tested revision; record the commit and deployment URL. Run paid, declined, cancellation, replay, cross-session access, partial/full refund result display, and receipt checks against that deployment. Do not create new real-money payments without approval.
+5. Deploy the tested revision; record the commit and deployment URL. *Commit `6472e50` is deployed at https://wathiqpay-demo2.vercel.app and was retested on 22 September 2026 for paid (FR, AR), cross-session receipt access, and the official pay-button artwork; the full card run is recorded in live-evidence.md against commit 3a2ae95.* Run paid, declined, cancellation, replay, cross-session access, partial/full refund result display, and receipt checks against that deployment. Do not create new real-money payments without approval.
 6. Configure host alert routing for `[merchant]` registration/acknowledgement failures, unknown payments, and mismatches; trigger a safe test alert and verify delivery. Logs alone are not alerts.
-7. Confirm acknowledgement deadlines and configure reconciliation accordingly. The daily Vercel schedule is not sufficient evidence of prompt recovery after a customer closes the browser.
+7. Confirm acknowledgement deadlines and configure reconciliation accordingly. The daily Vercel schedule is not sufficient evidence of prompt recovery after a customer closes the browser. *A ten-minute schedule is ready in `.github/workflows/reconcile.yml`; it activates once the repository secrets `SHOP_URL` and `MERCHANT_ADMIN_TOKEN` are added.*
 8. Email delivery remains deferred by the owner. Obtain SATIM's explicit acceptance of that deferral, or complete delivery before a session that requires it. SMTP itself is a transport choice; do not assume the receipt-email requirement is waived.
 
 ## On the day

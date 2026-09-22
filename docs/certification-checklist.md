@@ -19,7 +19,7 @@ This checklist mirrors the accessible SATIM certification portal and adds backen
 - [x] Final payable amount is complete and visually prominent.
 - [x] Amount and currency remain consistent through checkout and the result page.
 - [x] CAPTCHA protects the page containing the payment button.
-- [x] Payment button displays the CIB/Edahabia logo. *Local implementation: unmodified banner from SATIM's public payment page; deployment and qualifier acceptance of the layout remain to verify. See `PAYMENT-ARTWORK.md` in the merchant image directory.*
+- [x] Payment button displays the CIB/Edahabia logo. *Unmodified banner from SATIM's public payment page, deployed and verified 22 September 2026; qualifier acceptance of the layout remains to confirm. See `PAYMENT-ARTWORK.md` in the merchant image directory.*
 - [x] Online-payment terms and product/service sale terms are displayed immediately before payment.
 - [x] Customer must explicitly acknowledge those terms.
 - [ ] Language is consistent across checkout, intermediate pages, SATIM redirect, return page, receipts, and errors. *Arabic PDF labels still fall back to French; some SATIM decline messages arrive in English.*
@@ -64,7 +64,7 @@ This checklist mirrors the accessible SATIM certification portal and adds backen
 - [x] Displays payment method as CIB/Edahabia.
 - [x] Displays SATIM support number `3020`.
 - [x] Allows the receipt to be printed.
-- [x] Allows the receipt to be downloaded as PDF.
+- [x] Allows the receipt to be downloaded as PDF. *(French, English, and Arabic; verified on the deployment)*
 - [ ] Allows the PDF receipt to be sent to an email address chosen by the customer. *Implemented; the live demo needs `SMTP_URL` configured.*
 
 ## 6. Rejected/error result page

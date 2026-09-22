@@ -14,6 +14,16 @@ Sanitized record of every exchange with the real SATIM certification environment
 | 2026-09-22 | 652b156 | Acknowledge an unknown `mdOrder` | `public/acknowledgeTransaction.do` | HTTP 401, `application/json`, body `"Transaction is not found"` (a JSON string) | Documented: `ErrorCode 6` in a JSON object | Divergence; SDK updated to raise `GatewayError http_401` |
 | 2026-09-22 | 652b156 | Open the returned `formUrl` in a browser | hosted page | HTTP 200, title "Paiement", CIB and Algérie Poste branding, merchant name "WATHIQ PAY", amount 50.00 DZD, card form, session timer starting at 10 minutes, help link and 3020 | Hosted page renders | Pass |
 
+## Deployment `6472e50`, 22 September 2026
+
+| Check on https://wathiqpay-demo2.vercel.app | Result |
+|---|---|
+| Pay button shows SATIM's official CIB/Edahabia banner | Pass |
+| Arabic purchase with the valid card: result page | Pass (تم قبول الدفع) |
+| Arabic PDF receipt: Noto Sans Arabic embedded, shaped, right to left, Latin values in Helvetica | Pass (visually checked) |
+| Receipt page, PDF, and e-mail from another browser session | 404 for all three |
+| Another session opening the return URL | Sees the payment result; no e-mail address, no receipt links |
+
 ## Reference merchant on the public host, 22 September 2026
 
 Shop: `https://wathiqpay-demo2.vercel.app` (Vercel function in `cdg1`, Turso database), certification mode, commit `92f2856`. Each scenario was a real purchase: catalog, cart, checkout with name, phone, terms, and CAPTCHA, SATIM hosted page and 3-D Secure password page, SATIM's redirect back to the shop, backend acknowledgement, result page. Card fields were verified against the card data before each payment.
