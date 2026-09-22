@@ -128,6 +128,13 @@ describe("reference merchant journey against the simulator", () => {
     assert.match(page.body, /name="terms"/);
     assert.match(page.body, /name="captcha"/);
     assert.match(page.body, /CIB · Edahabia/);
+    assert.match(page.body, /<button class="pay"[^>]*>[\s\S]*<img src="\/images\/cib-edahabia\.jpg"/);
+    const paymentArtwork = await fetch(`${origin}/images/cib-edahabia.jpg`);
+    assert.equal(paymentArtwork.status, 200);
+    assert.equal(paymentArtwork.headers.get("content-type"), "image/jpeg");
+    const artworkBytes = Buffer.from(await paymentArtwork.arrayBuffer());
+    assert.equal(artworkBytes.subarray(0, 3).toString("hex"), "ffd8ff");
+    assert.ok(artworkBytes.length > 1000);
     assert.match(page.body, /lang="fr"/);
     const empty = await new Browser().go(`${origin}/checkout`);
     assert.match(empty.body, /panier est vide/);
@@ -199,7 +206,14 @@ describe("reference merchant journey against the simulator", () => {
     // Printable receipt, PDF, and email.
     const printable = await b.go(`${origin}/orders/${ref}/receipt`);
     assert.match(printable.body, /Reçu de paiement/);
-    const pdf = await fetch(`${origin}/orders/${ref}/receipt.pdf`);
+    const cookie = [...b.cookies].map(([k, v]) => `${k}=${v}`).join("; ");
+    assert.equal((await fetch(`${origin}/orders/${ref}/receipt.pdf`)).status, 404, "another session cannot download the receipt");
+    assert.equal((await fetch(`${origin}/orders/${ref}/receipt`)).status, 404, "another session cannot open the printable receipt");
+    const stranger = await new Browser().go(`${origin}/payment/return?ref=${ref}`);
+    assert.match(stranger.body, /Paiement accepté/, "the payment result is still shown");
+    assert.doesNotMatch(stranger.body, /client@example\.com|receipt\.pdf|receipt\/email/, "but no receipt tools or e-mail for a stranger");
+    assert.equal((await new Browser().go(`${origin}/orders/${ref}/receipt/email`, { method: "POST", form: { email: "attacker@example.com" } })).status, 404);
+    const pdf = await fetch(`${origin}/orders/${ref}/receipt.pdf`, { headers: { cookie } });
     assert.equal(pdf.headers.get("content-type"), "application/pdf");
     const bytes = Buffer.from(await pdf.arrayBuffer());
     assert.equal(bytes.subarray(0, 5).toString(), "%PDF-");
@@ -231,6 +245,21 @@ describe("reference merchant journey against the simulator", () => {
     const result = await b.go(`${hosted.url}/decide`, { method: "POST", form: { outcome: "reversed" } });
     assert.match(result.body, /Votre transaction a été rejetée/);
     assert.match(result.body, /3020/);
+  });
+
+  test("refund results are displayed as refunds rather than rejections", async () => {
+    for (const partial of [false, true]) {
+      const b = new Browser();
+      const hosted = await checkout(b);
+      const { orderId, ref } = refFromHosted(hosted);
+      const gatewayOrder = sim.orders.get(orderId)!;
+      gatewayOrder.status = 4;
+      gatewayOrder.refunded = partial ? 1n : BigInt(gatewayOrder.amount);
+      const result = await b.go(`${origin}/payment/return?ref=${ref}&orderId=${orderId}`);
+      assert.match(result.body, partial ? /Partiellement remboursée/ : /Remboursée/);
+      assert.doesNotMatch(result.body, /Votre transaction a été rejetée/);
+      assert.equal(await app.store.fulfilmentCount(ref), 0);
+    }
   });
 
   test("undocumented status 1 is held as unknown, not fulfilled", async () => {
@@ -316,6 +345,27 @@ describe("reference merchant journey against the simulator", () => {
     } finally {
       await broken.stop();
     }
+  });
+});
+
+describe("Arabic PDF receipt", () => {
+  test("is shaped, embeds the Arabic font, and keeps Latin values in Helvetica", async () => {
+    const { buildReceiptPdf, bidiRuns } = await import("../src/receipt-pdf.js");
+    assert.deepEqual(bidiRuns("1 200,00 دج").map((r) => [r.arabic, r.text]), [[false, "1 200,00"], [true, " دج"]]);
+    assert.deepEqual(bidiRuns("رقم الطلب").map((r) => r.arabic), [true]);
+    const pdf = await buildReceiptPdf({ direction: "rtl", title: "إيصال الدفع", lines: [{ label: "رقم الطلب", value: "WBZV4RSJXP" }, { label: "المبلغ", value: "1 200,00 دج" }, { label: "وسيلة الدفع", value: "بطاقة CIB / الذهبية" }], footer: ["خدمة عملاء SATIM: 3020"] });
+    const text = pdf.toString("latin1");
+    assert.ok(text.startsWith("%PDF-1.4"));
+    assert.match(text, /\/Subtype \/CIDFontType2/);
+    assert.match(text, /\/BaseFont \/NotoSansArabic-Bold/);
+    assert.match(text, /\/Encoding \/Identity-H/);
+    assert.match(text, /\/FontFile2 \d+ 0 R/);
+    assert.match(text, /\(WBZV4RSJXP\) Tj/, "Latin value drawn with Helvetica");
+    assert.match(text, /\(\/\) Tj/, "a character missing from the Arabic font falls back to Helvetica");
+    assert.doesNotMatch(text, /<0000> Tj/, "no missing-glyph boxes in Arabic runs");
+    assert.ok(pdf.length < 400_000, `PDF stays small (${pdf.length} bytes)`);
+    const ltr = await buildReceiptPdf({ direction: "ltr", title: "Reçu", lines: [{ label: "Montant", value: "1 200,00 DZD" }], footer: [] });
+    assert.doesNotMatch(ltr.toString("latin1"), /FontFile2/, "French receipts embed no font");
   });
 });
 

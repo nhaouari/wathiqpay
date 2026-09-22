@@ -1,0 +1,22 @@
+# Calls the demo shop's reconciliation endpoint every ten minutes, so orders
+# whose customer closed the browser after paying are acknowledged promptly
+# (Vercel Hobby crons run at most once a day). Inactive until both secrets
+# exist: SHOP_URL (e.g. https://wathiqpay-demo2.vercel.app) and
+# MERCHANT_ADMIN_TOKEN (the same value as on the Vercel project).
+name: reconcile
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Reconcile abandoned payments
+        env:
+          SHOP_URL: ${{ secrets.SHOP_URL }}
+          TOKEN: ${{ secrets.MERCHANT_ADMIN_TOKEN }}
+        run: |
+          if [ -z "$SHOP_URL" ] || [ -z "$TOKEN" ]; then echo "secrets not configured; skipping"; exit 0; fi
+          curl -fsS --max-time 60 -X POST -H "Authorization: Bearer $TOKEN" "$SHOP_URL/admin/reconcile?olderThan=600"

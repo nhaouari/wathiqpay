@@ -42,7 +42,7 @@ button:hover,.btn:hover{background:var(--blue-ink);border-color:var(--blue-ink);
 .quiet{background:transparent;color:var(--blue);border-color:var(--rule)}.quiet:hover{background:var(--sand-2);color:var(--blue-ink);border-color:var(--rule)}
 .link{background:none;border:0;padding:0;color:var(--blue);font-weight:400;text-decoration:underline;text-underline-offset:3px}.link:hover{background:none;color:var(--blue-ink)}
 .pay{width:100%;font-size:1.1rem;padding:.95rem 1.2rem;display:flex;justify-content:space-between;align-items:center;gap:1rem;box-shadow:inset 0 -4px 0 var(--saffron)}
-.cards{display:inline-flex;gap:.35rem;align-items:center;font-size:.8rem;font-weight:500;opacity:.9}.cards svg{width:1.6rem;height:1.1rem}
+.pay{flex-direction:column}.cards{display:block;width:100%;max-width:36rem;background:#fff;border-radius:4px;padding:.3rem}.cards img{display:block;width:100%;height:auto}
 /* tables */
 table{border-collapse:collapse;width:100%}th,td{padding:.75rem .2rem;text-align:start;border-bottom:1px solid var(--rule);vertical-align:middle}th{font-weight:500;color:var(--ink-2);font-size:.9rem}
 td.num,th.num{text-align:end;white-space:nowrap}tfoot th,tfoot td{border-bottom:0;padding-top:.6rem}tfoot tr:last-child th,tfoot tr:last-child td{font-size:1.15rem;color:var(--ink);font-weight:500}
@@ -75,7 +75,7 @@ small,.note{color:var(--ink-2);font-size:.85rem}
 
 const fonts = `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=Noto+Naskh+Arabic:wght@400;500;600&family=Noto+Sans+Arabic:wght@400;500;600&display=swap">`;
 
-const cardMark = `<span class="cards" aria-hidden="true"><svg viewBox="0 0 32 22"><rect x=".5" y=".5" width="31" height="21" rx="3" fill="#fff" stroke="rgba(255,255,255,.6)"/><rect x="3" y="5" width="26" height="4" fill="#1B4F86"/><rect x="3" y="13" width="10" height="3" rx="1" fill="#D99A17"/></svg>CIB · Edahabia</span>`;
+const cardMark = `<span class="cards"><img src="/images/cib-edahabia.jpg" width="1143" height="110" alt="CIB · Edahabia"></span>`;
 
 export interface Ctx {
   lang: Lang;
@@ -182,7 +182,6 @@ export function checkoutPage(ctx: Ctx, cart: { lines: PricedLine[]; totalMinor: 
   <div class="terms"><h2>${esc(t.terms)}</h2><p>${esc(t.termsText)}</p><label class="check"><input type="checkbox" name="terms" value="yes" required><span>${esc(t.acceptTerms)}</span></label></div>
   <div class="captcha"><label for="captcha">${esc(t.captcha)} <strong>${esc(captcha.question)}</strong> ?</label><input id="captcha" type="text" name="captcha" required inputmode="numeric" autocomplete="off"><input type="hidden" name="captchaToken" value="${esc(captcha.token)}"></div>
   <button class="pay" type="submit"><span>${esc(t.payAmount)} <span class="money">${esc(amount)}</span></span>${cardMark}</button>
-  <p class="note">${esc(t.logoNote)}</p>
 </form>
 <aside class="summary"><h2>${esc(t.orderSummary)}</h2><table><tbody>${summaryRows}</tbody><tfoot><tr><th>${esc(t.shipping)}</th><td class="num">${esc(t.shippingFree)}</td></tr></tfoot></table>
 <div class="total"><span>${esc(t.total)}</span><span class="money" id="total">${esc(amount)}</span></div></aside></div>`,
@@ -238,7 +237,7 @@ function receiptBlock(lang: Lang, data: ReceiptData, items: OrderItem[]): string
   return `<div class="receipt"><dl>${dl}<div class="big"><dt>${esc(amountRow[0])}</dt><dd class="money">${esc(amountRow[1])}</dd></div></dl>${list}</div>`;
 }
 
-export function successPage(ctx: Ctx, data: ReceiptData, items: OrderItem[], emailSentTo?: string, emailError?: boolean): string {
+export function successPage(ctx: Ctx, data: ReceiptData, items: OrderItem[], emailSentTo?: string, emailError?: boolean, owner = true): string {
   const t = messages[ctx.lang];
   const ref = data.order.orderNumber;
   return layout(
@@ -247,10 +246,10 @@ export function successPage(ctx: Ctx, data: ReceiptData, items: OrderItem[], ema
     `<div class="result"><h1 class="ok">${esc(t.successTitle)}</h1><p class="status">${esc(data.ack.respCodeDescription ?? "")}</p>
 ${receiptBlock(ctx.lang, data, items)}
 <p class="support">${esc(t.support)}</p>
-<div class="actions no-print"><a class="btn quiet" href="/orders/${ref}/receipt" target="_blank">${esc(t.print)}</a><a class="btn quiet" href="/orders/${ref}/receipt.pdf">${esc(t.downloadPdf)}</a></div>
+${owner ? `<div class="actions no-print"><a class="btn quiet" href="/orders/${ref}/receipt" target="_blank">${esc(t.print)}</a><a class="btn quiet" href="/orders/${ref}/receipt.pdf">${esc(t.downloadPdf)}</a></div>
 ${emailSentTo ? `<p class="alert good" role="status">${esc(t.emailSent)} ${esc(emailSentTo)}.</p>` : ""}
 ${emailError ? `<p class="alert bad" role="alert">${esc(t.emailFailed)}</p>` : ""}
-<form method="post" action="/orders/${ref}/receipt/email"><label class="field"><span>${esc(t.emailReceipt)}</span><input type="email" name="email" required value="${esc(data.order.customerEmail ?? "")}" autocomplete="email"></label><button class="quiet" type="submit">${esc(t.send)}</button></form>
+<form method="post" action="/orders/${ref}/receipt/email"><label class="field"><span>${esc(t.emailReceipt)}</span><input type="email" name="email" required value="${esc(data.order.customerEmail ?? "")}" autocomplete="email"></label><button class="quiet" type="submit">${esc(t.send)}</button></form>` : ""}
 <p style="margin-top:2rem"><a href="/">${esc(t.backToShop)}</a> &nbsp; <a href="/orders">${esc(t.myOrders)}</a></p></div>`,
   );
 }
@@ -260,12 +259,18 @@ export function receiptPage(ctx: Ctx, data: ReceiptData, items: OrderItem[]): st
   return layout(ctx, t.receipt, `<div class="result"><h1>${esc(t.receipt)}</h1><p class="status">${esc(t.shopTitle)}</p>${receiptBlock(ctx.lang, data, items)}<p class="support">${esc(t.support)}</p><p class="no-print"><button class="quiet" onclick="print()">${esc(t.print)}</button></p></div>`);
 }
 
-export function failurePage(ctx: Ctx, order: OrderRow, ack: AcknowledgeResult | undefined, kind: "declined" | "reversed" | "pending" | "review" | "failed"): string {
+export function failurePage(ctx: Ctx, order: OrderRow, ack: AcknowledgeResult | undefined, kind: "declined" | "reversed" | "refunded" | "partially_refunded" | "pending" | "review" | "failed"): string {
   const t = messages[ctx.lang];
   let title = t.failureTitle;
   let text: string;
   let cls = "ko";
   switch (kind) {
+    case "refunded":
+    case "partially_refunded":
+      title = t.stateLabels[kind];
+      text = t.stateLabels[kind];
+      cls = "hold";
+      break;
     case "reversed":
       text = t.reversedText;
       break;

@@ -54,8 +54,9 @@ test("live-observed shapes classify as expected", () => {
   assert.equal(refundedAmountMinor(parseAcknowledgeResponse(fx.ackFullyRefundedLive)), "5000");
   assert.equal(refundedAmountMinor(parseAcknowledgeResponse(fx.ackPaidLive)), "0");
   assert.equal(refundedAmountMinor(parseAcknowledgeResponse({ ErrorCode: "0", OrderStatus: 4 })), undefined);
-  // Status 4 without a deposit figure stays "refunded" (older synthetic fixture).
-  assert.equal(classify({ ErrorCode: "0", OrderStatus: 4 }), "refunded");
+  // Missing or inconsistent balances cannot establish a completed refund.
+  assert.equal(classify({ ErrorCode: "0", OrderStatus: 4 }), "unknown");
+  assert.equal(classify({ ...fx.ackFullyRefundedLive, depositAmount: 6000 }), "unknown");
   const paid = parseAcknowledgeResponse(fx.ackPaidLive);
   assert.equal(paid.approvalCode, "485040");
   assert.equal(paid.respCodeDescription, "Votre paiement a été accepté.");

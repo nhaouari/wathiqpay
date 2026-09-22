@@ -1,44 +1,283 @@
 /**
- * Dependency-free single-page PDF receipt using the standard Helvetica font.
- * Limitation: standard PDF fonts only cover Latin text (WinAnsi), so the PDF
- * is rendered with French or English labels. Arabic PDF receipts need an
- * embedded font, which a production merchant should add.
+ * Single-page PDF receipts without a PDF library.
+ *
+ * - French and English: the standard Helvetica fonts (WinAnsi), no embedding.
+ * - Arabic: Arabic runs are shaped with HarfBuzz and drawn in an embedded
+ *   Noto Sans Arabic (CIDFontType2, Identity-H, FlateDecode). Latin runs
+ *   (order numbers, "DZD", "CIB / Edahabia") stay in Helvetica, and runs are
+ *   laid out right to left with a small bidi resolver sufficient for receipt
+ *   labels and values.
  */
+import { readFileSync, existsSync } from "node:fs";
+import { deflateSync } from "node:zlib";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 
 export interface ReceiptLine {
   label: string;
   value: string;
 }
 
-export function buildReceiptPdf(title: string, lines: ReceiptLine[], footer: string[]): Buffer {
-  const content: string[] = [];
-  let y = 790;
-  const text = (x: number, size: number, s: string, bold = false) => {
-    content.push(`BT /${bold ? "F2" : "F1"} ${size} Tf ${x} ${y} Td (${escapePdf(s)}) Tj ET`);
-  };
-  text(50, 18, title, true);
-  y -= 34;
-  for (const line of lines) {
-    text(50, 11, line.label, true);
-    text(230, 11, line.value);
-    y -= 20;
-  }
-  y -= 10;
-  for (const f of footer) {
-    text(50, 10, f);
-    y -= 16;
-  }
-  const stream = Buffer.from(content.join("\n"), "latin1");
+export interface ReceiptPdfInput {
+  direction: "ltr" | "rtl";
+  title: string;
+  lines: ReceiptLine[];
+  footer: string[];
+}
 
-  const objects: Buffer[] = [
+const PAGE_W = 595;
+const PAGE_H = 842;
+const MARGIN = 50;
+
+// ---------------------------------------------------------------------------
+// Helvetica metrics (AFM widths, 1/1000 em) for measuring Latin runs.
+
+const HELV: Record<string, number> = {};
+const HELV_BOLD: Record<string, number> = {};
+{
+  const chars = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+  const reg = [278, 278, 355, 556, 556, 889, 667, 191, 333, 333, 389, 584, 278, 333, 278, 278, 556, 556, 556, 556, 556, 556, 556, 556, 556, 556, 278, 278, 584, 584, 584, 556, 1015, 667, 667, 722, 722, 667, 611, 778, 722, 278, 500, 667, 556, 833, 722, 778, 667, 778, 722, 667, 611, 722, 667, 944, 667, 667, 611, 278, 278, 278, 469, 556, 333, 556, 556, 500, 556, 556, 278, 556, 556, 222, 222, 500, 222, 833, 556, 556, 556, 556, 333, 500, 278, 556, 500, 722, 500, 500, 500, 334, 260, 334, 584];
+  const bold = [278, 333, 474, 556, 556, 889, 722, 238, 333, 333, 389, 584, 278, 333, 278, 278, 556, 556, 556, 556, 556, 556, 556, 556, 556, 556, 333, 333, 584, 584, 584, 611, 975, 722, 722, 722, 722, 667, 611, 778, 722, 278, 556, 722, 611, 833, 722, 778, 667, 778, 722, 667, 611, 722, 667, 944, 667, 667, 611, 333, 278, 333, 584, 556, 333, 556, 611, 556, 611, 556, 333, 611, 611, 278, 278, 556, 278, 889, 611, 611, 611, 611, 389, 556, 333, 611, 556, 778, 556, 556, 500, 389, 280, 389, 584];
+  [...chars].forEach((c, i) => {
+    HELV[c] = reg[i]!;
+    HELV_BOLD[c] = bold[i]!;
+  });
+  HELV["×"] = HELV_BOLD["×"] = 584;
+}
+
+function helvWidth(s: string, size: number, bold: boolean): number {
+  const table = bold ? HELV_BOLD : HELV;
+  let w = 0;
+  for (const ch of s) w += table[ch] ?? 556;
+  return (w * size) / 1000;
+}
+
+function escapeLatin(s: string): string {
+  const latin = Array.from(s, (ch) => (ch.charCodeAt(0) <= 0xff ? ch : "?")).join("");
+  return latin.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+}
+
+// ---------------------------------------------------------------------------
+// Arabic shaping (lazy: HarfBuzz and the fonts load only for Arabic receipts).
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+const FONT_DIR = [
+  join(HERE, "..", "fonts"),
+  join(HERE, "..", "..", "..", "..", "examples", "reference-merchant", "fonts"),
+  join(process.cwd(), "examples", "reference-merchant", "fonts"),
+].find((d) => existsSync(d)) ?? join(HERE, "..", "fonts");
+
+interface ShapedGlyph {
+  gid: number;
+  xAdvance: number;
+  xOffset: number;
+  yOffset: number;
+}
+
+interface ArabicFont {
+  key: "A1" | "A2";
+  name: string;
+  data: Buffer;
+  upem: number;
+  ascender: number;
+  descender: number;
+  shape(text: string): ShapedGlyph[];
+  /** Whether the font has a glyph for this character. */
+  covers(ch: string): boolean;
+  used: Map<number, number>; // gid -> advance in font units
+}
+
+type HB = typeof import("harfbuzzjs");
+let hbPromise: Promise<HB> | undefined;
+const fontCache = new Map<string, Promise<Omit<ArabicFont, "used">>>();
+
+async function loadArabicFont(file: string, key: ArabicFont["key"]): Promise<ArabicFont> {
+  hbPromise ??= import("harfbuzzjs");
+  if (!fontCache.has(file)) {
+    fontCache.set(
+      file,
+      (async () => {
+        const hb = await hbPromise!;
+        const data = readFileSync(join(FONT_DIR, file));
+        const face = new hb.Face(new hb.Blob(data));
+        const font = new hb.Font(face);
+        const ext = font.hExtents();
+        const coverage = new Map<string, boolean>();
+        return {
+          key,
+          name: file.replace(/\.ttf$/, ""),
+          data,
+          upem: face.upem,
+          ascender: ext.ascender,
+          descender: ext.descender,
+          shape(text: string): ShapedGlyph[] {
+            const buf = new hb.Buffer();
+            buf.addText(text);
+            buf.setDirection(hb.Direction.RTL);
+            buf.setScript("Arab");
+            buf.setLanguage("ar");
+            hb.shape(font, buf);
+            const infos = buf.getGlyphInfos();
+            const pos = buf.getGlyphPositions();
+            return infos.map((g, i) => ({ gid: g.codepoint, xAdvance: pos[i]!.xAdvance, xOffset: pos[i]!.xOffset, yOffset: pos[i]!.yOffset }));
+          },
+          covers(ch: string): boolean {
+            let hit = coverage.get(ch);
+            if (hit === undefined) {
+              const buf = new hb.Buffer();
+              buf.addText(ch);
+              buf.guessSegmentProperties();
+              hb.shape(font, buf);
+              hit = buf.getGlyphInfos().every((g) => g.codepoint !== 0);
+              coverage.set(ch, hit);
+            }
+            return hit;
+          },
+        };
+      })(),
+    );
+  }
+  const base = await fontCache.get(file)!;
+  return { ...base, used: new Map() };
+}
+
+// ---------------------------------------------------------------------------
+// Minimal bidi: split into Arabic and non-Arabic runs; neutrals between two
+// runs of the same kind join them, otherwise they take the paragraph (RTL).
+
+const ARABIC = /[؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]/;
+const STRONG_LATIN = /[A-Za-z0-9À-ɏ]/;
+
+interface Run {
+  arabic: boolean;
+  text: string;
+}
+
+export function bidiRuns(text: string): Run[] {
+  const chars = [...text];
+  const kind = chars.map((c) => (ARABIC.test(c) ? "A" : STRONG_LATIN.test(c) ? "L" : "N"));
+  for (let i = 0; i < kind.length; i += 1) {
+    if (kind[i] !== "N") continue;
+    let j = i;
+    while (j < kind.length && kind[j] === "N") j += 1;
+    const before = i > 0 ? kind[i - 1] : undefined;
+    const after = j < kind.length ? kind[j] : undefined;
+    const resolved = before && after && before === after ? before : "A"; // paragraph direction is RTL
+    for (let k = i; k < j; k += 1) kind[k] = resolved;
+    i = j - 1;
+  }
+  const runs: Run[] = [];
+  chars.forEach((c, i) => {
+    const arabic = kind[i] === "A";
+    const last = runs[runs.length - 1];
+    if (last && last.arabic === arabic) last.text += c;
+    else runs.push({ arabic, text: c });
+  });
+  return runs;
+}
+
+interface LaidRun {
+  width: number;
+  draw(x: number, y: number): string;
+}
+
+function layoutRtl(text: string, size: number, bold: boolean, fonts: { reg: ArabicFont; bold: ArabicFont }): LaidRun {
+  const font = bold ? fonts.bold : fonts.reg;
+  // Characters the Arabic font lacks (e.g. "/") inside an Arabic run are drawn in Helvetica.
+  const runs = bidiRuns(text).flatMap((run): Run[] => {
+    if (!run.arabic) return [run];
+    const out: Run[] = [];
+    for (const ch of run.text) {
+      const arabic = ch === " " || font.covers(ch);
+      const last = out[out.length - 1];
+      if (last && last.arabic === arabic) last.text += ch;
+      else out.push({ arabic, text: ch });
+    }
+    return out;
+  });
+  const pieces = runs.map((run): LaidRun => {
+    if (!run.arabic) {
+      const t = run.text;
+      return { width: helvWidth(t, size, bold), draw: (x, y) => `BT /${bold ? "F2" : "F1"} ${size} Tf ${x.toFixed(2)} ${y.toFixed(2)} Td (${escapeLatin(t)}) Tj ET` };
+    }
+    const glyphs = font.shape(run.text);
+    const scale = size / font.upem;
+    const width = glyphs.reduce((w, g) => w + g.xAdvance, 0) * scale;
+    for (const g of glyphs) font.used.set(g.gid, g.xAdvance);
+    return {
+      width,
+      draw: (x, y) => {
+        let pen = x;
+        const ops = [`BT /${font.key} ${size} Tf`];
+        for (const g of glyphs) {
+          ops.push(`1 0 0 1 ${(pen + g.xOffset * scale).toFixed(2)} ${(y + g.yOffset * scale).toFixed(2)} Tm <${g.gid.toString(16).padStart(4, "0")}> Tj`);
+          pen += g.xAdvance * scale;
+        }
+        ops.push("ET");
+        return ops.join("\n");
+      },
+    };
+  });
+  // Runs are in logical order; in an RTL paragraph the first run is rightmost.
+  const width = pieces.reduce((w, p) => w + p.width, 0);
+  return {
+    width,
+    draw: (xLeft, y) => {
+      let right = xLeft + width;
+      const ops: string[] = [];
+      for (const p of pieces) {
+        right -= p.width;
+        ops.push(p.draw(right, y));
+      }
+      return ops.join("\n");
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// PDF assembly.
+
+function fontObjects(font: ArabicFont, firstObj: number): { objects: Buffer[]; ref: number } {
+  // objects: Type0, CIDFont, FontDescriptor, FontFile2
+  const [type0, cid, desc, file] = [firstObj, firstObj + 1, firstObj + 2, firstObj + 3];
+  const k = 1000 / font.upem;
+  const widths = [...font.used.entries()].sort((a, b) => a[0] - b[0]).map(([gid, adv]) => `${gid} [${Math.round(adv * k)}]`).join(" ");
+  const compressed = deflateSync(font.data);
+  const psName = font.name.replace(/[^A-Za-z0-9-]/g, "");
+  return {
+    ref: type0,
+    objects: [
+      Buffer.from(`<< /Type /Font /Subtype /Type0 /BaseFont /${psName} /Encoding /Identity-H /DescendantFonts [${cid} 0 R] >>`),
+      Buffer.from(`<< /Type /Font /Subtype /CIDFontType2 /BaseFont /${psName} /CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> /FontDescriptor ${desc} 0 R /CIDToGIDMap /Identity /DW 500 /W [${widths}] >>`),
+      Buffer.from(`<< /Type /FontDescriptor /FontName /${psName} /Flags 4 /FontBBox [-600 -500 1600 1200] /ItalicAngle 0 /Ascent ${Math.round(font.ascender * k)} /Descent ${Math.round(font.descender * k)} /CapHeight 700 /StemV 80 /FontFile2 ${file} 0 R >>`),
+      Buffer.concat([Buffer.from(`<< /Length ${compressed.length} /Length1 ${font.data.length} /Filter /FlateDecode >>\nstream\n`), compressed, Buffer.from("\nendstream")]),
+    ],
+  };
+}
+
+function assemble(content: string, extraFonts: ArabicFont[]): Buffer {
+  const stream = Buffer.from(content, "latin1");
+  // 1 catalog, 2 pages, 3 page, 4 content, 5 Helvetica, 6 Helvetica-Bold, 7.. embedded fonts
+  const objects: Buffer[] = [];
+  const fontRefs: string[] = ["/F1 5 0 R", "/F2 6 0 R"];
+  let next = 7;
+  const fontObjs: Buffer[] = [];
+  for (const f of extraFonts) {
+    if (f.used.size === 0) continue;
+    const { objects: objs, ref } = fontObjects(f, next);
+    fontRefs.push(`/${f.key} ${ref} 0 R`);
+    fontObjs.push(...objs);
+    next += objs.length;
+  }
+  objects.push(
     Buffer.from("<< /Type /Catalog /Pages 2 0 R >>"),
     Buffer.from("<< /Type /Pages /Kids [3 0 R] /Count 1 >>"),
-    Buffer.from("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >>"),
+    Buffer.from(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PAGE_W} ${PAGE_H}] /Contents 4 0 R /Resources << /Font << ${fontRefs.join(" ")} >> >> >>`),
     Buffer.concat([Buffer.from(`<< /Length ${stream.length} >>\nstream\n`), stream, Buffer.from("\nendstream")]),
     Buffer.from("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>"),
     Buffer.from("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>"),
-  ];
-
+    ...fontObjs,
+  );
   const parts: Buffer[] = [Buffer.from("%PDF-1.4\n%\xE2\xE3\xCF\xD3\n", "latin1")];
   const offsets: number[] = [];
   let length = parts[0]!.length;
@@ -53,8 +292,50 @@ export function buildReceiptPdf(title: string, lines: ReceiptLine[], footer: str
   return Buffer.concat(parts);
 }
 
-function escapePdf(s: string): string {
-  // Map to WinAnsi where possible; replace anything outside Latin-1 with '?'.
-  const latin = Array.from(s, (ch) => (ch.charCodeAt(0) <= 0xff ? ch : "?")).join("");
-  return latin.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+function buildLtr(input: ReceiptPdfInput): Buffer {
+  const content: string[] = [];
+  let y = 790;
+  const text = (x: number, size: number, s: string, bold = false) => content.push(`BT /${bold ? "F2" : "F1"} ${size} Tf ${x} ${y} Td (${escapeLatin(s)}) Tj ET`);
+  text(MARGIN, 18, input.title, true);
+  y -= 34;
+  for (const line of input.lines) {
+    text(MARGIN, 11, line.label, true);
+    text(230, 11, line.value);
+    y -= 20;
+  }
+  y -= 10;
+  for (const f of input.footer) {
+    text(MARGIN, 10, f);
+    y -= 16;
+  }
+  return assemble(content.join("\n"), []);
+}
+
+async function buildRtl(input: ReceiptPdfInput): Promise<Buffer> {
+  const fonts = { reg: await loadArabicFont("NotoSansArabic-Regular.ttf", "A1"), bold: await loadArabicFont("NotoSansArabic-Bold.ttf", "A2") };
+  const content: string[] = [];
+  const right = PAGE_W - MARGIN;
+  const valueRight = 360;
+  let y = 790;
+  const put = (s: string, size: number, bold: boolean, rightEdge: number) => {
+    const run = layoutRtl(s, size, bold, fonts);
+    content.push(run.draw(rightEdge - run.width, y));
+  };
+  put(input.title, 18, true, right);
+  y -= 36;
+  for (const line of input.lines) {
+    put(line.label, 11, true, right);
+    put(line.value, 11, false, valueRight);
+    y -= 22;
+  }
+  y -= 10;
+  for (const f of input.footer) {
+    put(f, 10, false, right);
+    y -= 18;
+  }
+  return assemble(content.join("\n"), [fonts.reg, fonts.bold]);
+}
+
+export async function buildReceiptPdf(input: ReceiptPdfInput): Promise<Buffer> {
+  return input.direction === "rtl" ? buildRtl(input) : buildLtr(input);
 }

@@ -17,7 +17,7 @@ Certification mode reads `SATIM_USERNAME`, `SATIM_PASSWORD`, and `SATIM_TERMINAL
 |---|---|
 | Final amount complete and prominent; consistent through result page and receipt | `views.ts` checkout `.total`, success page, receipt rows use the acknowledged amount |
 | CAPTCHA on the page with the payment button | `captcha.ts`, HMAC-signed arithmetic challenge verified in `POST /checkout` before any SATIM call |
-| CIB/Edahabia logo on the payment button | Badge next to the button plus a documented placement for SATIM's official logo (not redistributed) |
+| CIB/Edahabia logo on the payment button | Unmodified banner from SATIM's public hosted payment page; provenance and remaining qualifier approval in `public/images/PAYMENT-ARTWORK.md` |
 | Terms of sale and online-payment terms shown and explicitly accepted | `.terms` block with required checkbox; server rejects without it |
 | Language consistent across checkout, SATIM request, result, receipts, errors | Cookie-selected FR/AR/EN; stored on the order; sent to `register.do` and `acknowledgeTransaction.do`; result page uses the order's language |
 | Hosted page opens as an independent page | `303` redirect to `formUrl`; no iframe or WebView |
@@ -29,14 +29,14 @@ Certification mode reads `SATIM_USERNAME`, `SATIM_PASSWORD`, and `SATIM_TERMINAL
 | Repeated returns and concurrent callbacks fulfil once | `store.fulfilOnce` conditional UPDATE inside `BEGIN IMMEDIATE` |
 | Unknown combinations held, not fulfilled | state `unknown`, "payment being verified" page |
 | Success page: `respCode_desc`, SATIM order ID, merchant order number, approval code, date/time, amount and currency, payment method, 3020 | `successPage` / `receiptRows` |
-| Print, PDF download, email receipt | `/orders/:ref/receipt`, `/orders/:ref/receipt.pdf` (`receipt-pdf.ts`), `POST /orders/:ref/receipt/email` (`mailer.ts` outbox) |
+| Print, PDF download, email receipt (only the ordering session can open them) | `/orders/:ref/receipt`, `/orders/:ref/receipt.pdf` (`receipt-pdf.ts`), `POST /orders/:ref/receipt/email` (`mailer.ts` outbox) |
 | Failure page: rejection message for reversed, else `respCode_desc` or `actionCodeDescription`, 3020, no credentials | `failurePage` |
 | Closed browser / abandoned payment recovery | `POST /admin/reconcile` acknowledges stale registered orders (`reconcile()`) |
 
 ## Documented limitations
 
 - Receipt date/time is the merchant's acknowledgement timestamp. SATIM has not confirmed an authoritative gateway timestamp field (open question). Payment method is shown generically as "CIB / Edahabia card" because the card network must not be inferred from the masked PAN.
-- The PDF uses standard Latin fonts; Arabic receipts fall back to French labels in the PDF. Embed a font for production.
+- PDF receipts use Helvetica for French and English. Arabic receipts shape text with HarfBuzz and embed Noto Sans Arabic (SIL Open Font License, `fonts/OFL.txt`), laid out right to left.
 - Without `SMTP_URL` the mailer writes `.eml` files to `outbox/`. With `SMTP_URL=smtps://user:pass@host:465` receipts are sent through a minimal built-in SMTPS client (AUTH PLAIN).
 - `/admin/*` endpoints require `Authorization: Bearer $MERCHANT_ADMIN_TOKEN`; in simulator mode without a token they stay open for local testing.
 - Sessions are an anonymous `sid` cookie; there is no customer login. Order pages are visible only to the session that placed them.

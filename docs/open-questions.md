@@ -5,7 +5,7 @@ The accessible certification portal leaves the following points undocumented or 
 ## Endpoints and connectivity
 
 1. What is the official production REST base URL?
-2. Is `POST` with `application/x-www-form-urlencoded` formally supported for all three endpoints? *Live-observed 22 September 2026: accepted by `register.do` and `acknowledgeTransaction.do` in certification; `refund.do` untested; formal confirmation still wanted.*
+2. Is `POST` with `application/x-www-form-urlencoded` formally supported for all three endpoints? *Live-observed 22 September 2026: registration, acknowledgement, and refunds succeeded in certification; formal production confirmation still wanted.*
 3. Are merchant-server IP allowlisting, mTLS, or client certificates required?
 4. Which TLS versions and cipher requirements apply?
 5. What are the official connection and response timeouts?

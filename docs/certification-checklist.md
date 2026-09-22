@@ -10,7 +10,7 @@ This checklist mirrors the accessible SATIM certification portal and adds backen
 - [ ] Certification and production endpoints have been confirmed in writing.
 - [ ] Merchant server IP allowlisting or certificate requirements have been confirmed.
 - [x] Refund permission is enabled for the intended SATIM user.
-- [x] Development is complete before reserving the certification date.
+- [ ] Development is complete before reserving the certification date. *Arabic PDF rendering and the approved payment logo remain open.*
 - [ ] Certification date is reserved and validated by SATIM.
 
 ## 2. Checkout UI
@@ -19,10 +19,10 @@ This checklist mirrors the accessible SATIM certification portal and adds backen
 - [x] Final payable amount is complete and visually prominent.
 - [x] Amount and currency remain consistent through checkout and the result page.
 - [x] CAPTCHA protects the page containing the payment button.
-- [ ] Payment button displays the CIB/Edahabia logo.
+- [x] Payment button displays the CIB/Edahabia logo. *Local implementation: unmodified banner from SATIM's public payment page; deployment and qualifier acceptance of the layout remain to verify. See `PAYMENT-ARTWORK.md` in the merchant image directory.*
 - [x] Online-payment terms and product/service sale terms are displayed immediately before payment.
 - [x] Customer must explicitly acknowledge those terms.
-- [x] Language is consistent across checkout, intermediate pages, SATIM redirect, return page, receipts, and errors.
+- [ ] Language is consistent across checkout, intermediate pages, SATIM redirect, return page, receipts, and errors. *Arabic PDF labels still fall back to French; some SATIM decline messages arrive in English.*
 - [x] SATIM payment page opens as an independent web page, not an embedded merchant frame or mobile WebView.
 
 ## 3. Order registration
@@ -111,4 +111,3 @@ Use only SATIM-issued certification data stored outside source control.
 - [x] Production base URL is explicitly configured and cannot silently fall back to certification. *(client refuses production without `baseUrl`; unit-tested)*
 - [ ] Alerts exist for SATIM timeouts, malformed responses, unknown statuses, and acknowledgement failures. *Failures are logged with a `[merchant]` prefix; the alert rule itself must be set up in the host's log tooling (see runbook).*
 - [x] Operational runbook documents reconciliation, reversals, refunds, and SATIM escalation contacts. *(docs/runbook.md)*
-

@@ -10,7 +10,8 @@
   ],
   "functions": {
     "api/merchant.ts": {
-      "maxDuration": 30
+      "maxDuration": 30,
+      "includeFiles": "{examples/reference-merchant/fonts/**,node_modules/harfbuzzjs/dist/**}"
     }
   },
   "crons": [

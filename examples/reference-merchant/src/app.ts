@@ -95,25 +95,30 @@ export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer;
         if (await store.fulfilOnce(order.orderNumber, ackJson)) fulfil(order);
       } else {
         await store.recordAcknowledgement(order.orderNumber, "review", ackJson, `mismatch: ${match.mismatches.join(",")}`);
+        console.error(`[merchant] payment mismatch order=${order.orderNumber} fields=${match.mismatches.join(",")}`);
       }
     } else if (state === "registered" || state === "unknown") {
       await store.recordAcknowledgement(order.orderNumber, state === "registered" ? "registered" : "unknown", ackJson);
+      if (state === "unknown") console.error(`[merchant] payment unknown order=${order.orderNumber}`);
     } else {
       await store.recordAcknowledgement(order.orderNumber, state, ackJson);
     }
     return { order: (await store.get(order.orderNumber))!, ack };
   }
 
-  async function renderOutcome(ctx: Ctx, order: OrderRow, ack: AcknowledgeResult | undefined): Promise<string> {
+  async function renderOutcome(ctx: Ctx, order: OrderRow, ack: AcknowledgeResult | undefined, owner: boolean): Promise<string> {
     switch (order.state) {
       case "paid":
-        return successPage(ctx, { order, ack: ack! }, await store.items(order.orderNumber));
+        // Anyone returning from SATIM sees the payment result; receipt tools
+        // (which reveal the customer's e-mail) are for the ordering session only.
+        return successPage(ctx, { order, ack: ack! }, await store.items(order.orderNumber), undefined, false, owner);
       case "declined":
         return failurePage(ctx, order, ack, "declined");
       case "reversed":
+        return failurePage(ctx, order, ack, "reversed");
       case "refunded":
       case "partially_refunded":
-        return failurePage(ctx, order, ack, "reversed");
+        return failurePage(ctx, order, ack, order.state);
       case "review":
         return failurePage(ctx, order, ack, "review");
       case "failed":
@@ -262,7 +267,7 @@ export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer;
       }
       const settled = await settle(order);
       // Language consistency with the checkout that started it, even without the cookie.
-      return html(200, await renderOutcome({ ...(await ctx()), lang: settled.order.language }, settled.order, settled.ack));
+      return html(200, await renderOutcome({ ...(await ctx()), lang: settled.order.language }, settled.order, settled.ack, settled.order.sessionId === session));
     }
 
     // ---- orders, receipts -------------------------------------------------
@@ -279,7 +284,8 @@ export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer;
     m = /^\/orders\/([A-Z0-9]{1,10})\/receipt(\.pdf)?$/.exec(path);
     if (m && method === "GET") {
       const order = await store.get(m[1]!);
-      if (!order || order.state !== "paid" || !order.ackJson) return html(404, notFoundPage(await ctx()));
+      // Receipts contain the customer's details: only the session that placed the order may open them.
+      if (!order || order.sessionId !== session || order.state !== "paid" || !order.ackJson) return html(404, notFoundPage(await ctx()));
       const data = { order, ack: JSON.parse(order.ackJson) as AcknowledgeResult };
       if (!m[2]) return html(200, receiptPage({ ...(await ctx()), lang: order.language }, data, await store.items(order.orderNumber)));
       const pdf = await renderPdf(order.language, data);
@@ -291,7 +297,7 @@ export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer;
     m = /^\/orders\/([A-Z0-9]{1,10})\/receipt\/email$/.exec(path);
     if (m && method === "POST") {
       const order = await store.get(m[1]!);
-      if (!order || order.state !== "paid" || !order.ackJson) return html(404, notFoundPage(await ctx()));
+      if (!order || order.sessionId !== session || order.state !== "paid" || !order.ackJson) return html(404, notFoundPage(await ctx()));
       const form = await readForm(req);
       const email = (form.get("email") ?? "").trim();
       const data = { order, ack: JSON.parse(order.ackJson) as AcknowledgeResult };
@@ -350,15 +356,14 @@ export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer;
   }
 
   async function renderPdf(lang: Lang, data: { order: OrderRow; ack: AcknowledgeResult }): Promise<Buffer> {
-    // Standard PDF fonts cannot render Arabic; fall back to French labels for AR.
-    const pdfLang: Lang = lang === "AR" ? "FR" : lang;
-    const t = messages[pdfLang];
-    const items = (await store.items(data.order.orderNumber)).map((it) => ({ label: `${it.quantity} ×`, value: `${it.name}  ${formatAmount((BigInt(it.unitMinor) * BigInt(it.quantity)).toString(), pdfLang)}` }));
-    return buildReceiptPdf(
-      t.receipt,
-      [...receiptRows(pdfLang, data).map(([label, value]) => ({ label, value })), ...items],
-      [t.support, `${t.total}: ${formatAmount(data.ack.amountMinor ?? data.order.amountMinor, pdfLang)}`],
-    );
+    const t = messages[lang];
+    const items = (await store.items(data.order.orderNumber)).map((it) => ({ label: `${it.quantity} ×`, value: `${it.name}  ${formatAmount((BigInt(it.unitMinor) * BigInt(it.quantity)).toString(), lang)}` }));
+    return buildReceiptPdf({
+      direction: lang === "AR" ? "rtl" : "ltr",
+      title: t.receipt,
+      lines: [...receiptRows(lang, data).map(([label, value]) => ({ label, value })), ...items],
+      footer: [t.support, `${t.total}: ${formatAmount(data.ack.amountMinor ?? data.order.amountMinor, lang)}`],
+    });
   }
 
   const server = createServer((req, res) => {

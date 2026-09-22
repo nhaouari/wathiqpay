@@ -16,6 +16,7 @@ ENV NODE_ENV=production MERCHANT_HOST=0.0.0.0 MERCHANT_PORT=3000 \
 COPY --from=build /app/build ./build
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/examples/reference-merchant/public ./examples/reference-merchant/public
+COPY --from=build /app/examples/reference-merchant/fonts ./examples/reference-merchant/fonts
 COPY package.json ./
 RUN mkdir -p /data && chown node:node /data
 USER node

@@ -99,11 +99,11 @@ Observations from the card runs:
 
 Account-side blocker resolved 22 September 2026.
 
-- POST with `application/x-www-form-urlencoded` is accepted by `register.do` and `acknowledgeTransaction.do` in certification. Open question 2 is answered for these two endpoints; `refund.do` is untested.
+- POST with `application/x-www-form-urlencoded` succeeded for registration, acknowledgement, and the refunds recorded above in certification. Formal production confirmation remains open.
 - The hosted payment page lives on `test.satim.dz`, not on the API host `test2.satim.dz`. Return-URL configuration must not assume a single host.
 - The hosted page shows a session countdown starting at about ten minutes. An abandoned page therefore expires within minutes; the reconciliation job should treat "registered" orders older than that as candidates.
 - Before payment, the acknowledgement returns `Pan: ""` and `depositAmount: 0` with `actionCode -100`. `ErrorCode` is a string while `Amount` and `OrderStatus` are numbers, confirming the mixed representation the parser was built for.
-- Acknowledging an unpaid order twice returned identical bodies. Repeatability after a *paid* outcome is still unverified.
+- Repeated acknowledgement of unpaid and paid orders returned identical responses in the recorded runs. This observation is not a formal production idempotency guarantee.
 - An unknown `mdOrder` is answered with HTTP 401 and the JSON string `"Transaction is not found"`, not the documented error code 6. The SDK now inspects non-2xx bodies and reports this as a `GatewayError` with code `http_401`.
 - The `formUrl` appends `language=fr` in lowercase even though the request sent `FR`; SATIM accepts the uppercase input.
 
@@ -115,6 +115,6 @@ Findings before 22 September 2026:
 
 ## Next live step
 
-Deploy the reference merchant on a public HTTPS host so the return redirect, result pages, and receipts are exercised by SATIM's redirect rather than by a placeholder URL, then repeat the scenarios through the shop. Ask SATIM about the two limit scenarios, the expired-card approval, and the first-attempt CVV declines.
+The public HTTPS journey and refund runs are complete as recorded above. Next: deploy the locally verified refund-display and unknown-balance fixes, repeat the affected checks, and capture the deployment identifier. Resolve the two limit scenarios, expired-card approval, and unavailable expiry with SATIM. The CVV-driver issue was withdrawn and must not be raised as a gateway defect.
 
-Earlier plan: complete a payment on the hosted page with SATIM's certification test cards (from the CIBWEBLab portal, kept out of the repository), then acknowledge the order with `npm run test:live` extended to that order ID, or run the reference merchant on a public HTTPS host so the return flow is exercised end to end. That produces the first live `paid` fixture and lets the refund path be tested.
+Arabic PDF rendering remains incomplete (French fallback); the existing PDF download pass does not establish Arabic-language compliance. Email delivery is deferred at the owner's request, not passed or waived by SATIM. See `certification-day.md` for the remaining handoff gates.

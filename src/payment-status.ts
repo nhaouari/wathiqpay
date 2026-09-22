@@ -31,7 +31,9 @@ export function classifyPayment(result: AcknowledgeResult): PaymentState {
         // Live-observed (22 September 2026): after a partial refund SATIM
         // reports OrderStatus 4 with depositAmount = amount still captured.
         // Only a zero deposit means the whole payment was returned.
-        return result.depositAmountMinor !== undefined && compareMinorUnits(result.depositAmountMinor, "0") > 0 ? "partially_refunded" : "refunded";
+        if (result.depositAmountMinor === undefined) return "unknown";
+        if (result.amountMinor !== undefined && compareMinorUnits(result.depositAmountMinor, result.amountMinor) > 0) return "unknown";
+        return compareMinorUnits(result.depositAmountMinor, "0") > 0 ? "partially_refunded" : "refunded";
       case ORDER_STATUS.DECLINED_FALLBACK:
       case ORDER_STATUS.AUTHORIZATION_DECLINED:
         return "declined";

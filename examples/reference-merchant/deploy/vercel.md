@@ -45,6 +45,6 @@ curl -H "Authorization: Bearer $MERCHANT_ADMIN_TOKEN" https://demo.wathiqpay.com
 
 ## Differences from the Docker deployment
 
-- Reconciliation of abandoned orders runs from the Vercel cron in `vercel.json` once a day at 03:00 UTC (the most a Hobby plan allows; Pro plans may shorten the schedule) and on demand through the admin endpoint. Customers who return normally are acknowledged immediately either way.
+- Reconciliation of abandoned orders runs every ten minutes from `.github/workflows/reconcile.yml` once the repository secrets `SHOP_URL` and `MERCHANT_ADMIN_TOKEN` are set, plus the Vercel cron in `vercel.json` once a day at 03:00 UTC (the most a Hobby plan allows; Pro plans may shorten the schedule) and on demand through the admin endpoint. Customers who return normally are acknowledged immediately either way.
 - No local outbox: set `SMTP_URL` for the e-mail receipt requirement to work.
 - Cold starts add a few hundred milliseconds to the first request after idle.

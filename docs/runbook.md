@@ -29,7 +29,7 @@ curl -H "Authorization: Bearer $ADMIN" $SHOP/admin/orders/<ORDER_NUMBER>
 curl -X POST -H "Authorization: Bearer $ADMIN" "$SHOP/admin/reconcile?olderThan=600"
 ```
 
-The hosted SATIM session lasts about ten minutes, so orders older than that can safely be reconciled.
+The hosted page shows about ten minutes, but that timer does not establish the acknowledgement deadline. Confirm the deadline with SATIM; the daily Vercel job is not a guarantee of timely acknowledgement for customers who never return. Do not mark an order failed solely because its timer elapsed.
 
 **Refund** (full or partial; never retried automatically):
 
@@ -52,7 +52,7 @@ If the refund call times out, the SDK reports `outcome: indeterminate`. Acknowle
 | `receipt e-mail failed` | Customer sees "receipt could not be e-mailed" | Check `SMTP_URL`; the PDF download still works |
 | Orders stuck in `unknown` or `review` | Admin order lookup | Compare with SATIM; never fulfil by hand without a matching acknowledgement |
 
-Alerting: the shop writes these lines to standard error with the `[merchant]` prefix. Route them to an alert (Vercel Log Drains, or `docker compose logs` to your log collector) with a rule on `register failed`, `acknowledge failed`, and `receipt e-mail failed`.
+Alerting: the shop writes these lines to standard error with the `[merchant]` prefix. Route them to an alert (Vercel Log Drains, or `docker compose logs` to your log collector) with a rule on `register failed`, `acknowledge failed`, `payment unknown`, `payment mismatch`, and `receipt e-mail failed`. Refund acknowledgements without a remaining deposit balance, or with a balance exceeding the original amount, stay `unknown` pending investigation.
 
 ## SATIM contacts
 
