@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 
-const DEMO = "https://wathiqpay-demo2.vercel.app";
+const DEMO = "https://demo.wathiqpay.com";
 const REPO = "https://github.com/nhaouari/wathiqpay";
 const UPDATED = "22 septembre 2026";
 

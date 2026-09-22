@@ -1,7 +1,7 @@
 # Calls the demo shop's reconciliation endpoint every ten minutes, so orders
 # whose customer closed the browser after paying are acknowledged promptly
 # (Vercel Hobby crons run at most once a day). Inactive until both secrets
-# exist: SHOP_URL (e.g. https://wathiqpay-demo2.vercel.app) and
+# exist: SHOP_URL (e.g. https://demo.wathiqpay.com) and
 # MERCHANT_ADMIN_TOKEN (the same value as on the Vercel project).
 name: reconcile
 on:

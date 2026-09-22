@@ -150,7 +150,8 @@ export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer;
       res.writeHead(303, { location: to, "set-cookie": setCookies });
       res.end();
     };
-    const method = req.method ?? "GET";
+    // HEAD is answered like GET (Node drops the body), so link checkers and previews see 200.
+    const method = req.method === "HEAD" ? "GET" : (req.method ?? "GET");
     const path = url.pathname;
 
     // Static product images (whitelisted names only; no path traversal).

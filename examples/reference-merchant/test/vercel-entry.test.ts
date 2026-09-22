@@ -25,6 +25,7 @@ test("the Vercel entry serves the shop from environment configuration and accept
   const port = (server.address() as { port: number }).port;
   const origin = `http://127.0.0.1:${port}`;
   try {
+    assert.equal((await fetch(`${origin}/`, { method: "HEAD" })).status, 200, "HEAD is answered like GET");
     const health = await fetch(`${origin}/healthz`);
     assert.deepEqual(await health.json(), { ok: true, mode: "simulator" });
     const home = await fetch(`${origin}/`);

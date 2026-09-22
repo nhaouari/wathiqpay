@@ -1,6 +1,6 @@
 # Operations runbook — reference merchant
 
-For whoever operates a WathiqPay merchant (the demo at `https://wathiqpay-demo2.vercel.app`, or a merchant using the module). Commands assume `ADMIN=$MERCHANT_ADMIN_TOKEN` and `SHOP=https://<shop host>`.
+For whoever operates a WathiqPay merchant (the demo at `https://demo.wathiqpay.com`, or a merchant using the module). Commands assume `ADMIN=$MERCHANT_ADMIN_TOKEN` and `SHOP=https://<shop host>`.
 
 ## Order states
 

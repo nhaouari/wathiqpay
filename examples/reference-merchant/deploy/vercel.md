@@ -25,7 +25,7 @@ The schema is created automatically on the first request.
 | Name | Value |
 |---|---|
 | `MERCHANT_MODE` | `certification` |
-| `MERCHANT_PUBLIC_URL` | `https://demo.wathiqpay.com` |
+| `MERCHANT_PUBLIC_URL` | `https://demo.wathiqpay.com` (must be the domain customers use: SATIM returns them there, and the session cookie belongs to it) |
 | `MERCHANT_DB_URL` | the `libsql://…` URL from step 1 |
 | `MERCHANT_DB_AUTH_TOKEN` | the Turso token |
 | `MERCHANT_ADMIN_TOKEN` | `openssl rand -hex 32` |
