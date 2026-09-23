@@ -15,12 +15,13 @@ import type { MerchantConfig } from "./config.js";
 import { OrderStore, type OrderRow, type OrderState } from "./store.js";
 import { messages, normalizeLang, formatAmount, type Lang } from "./i18n.js";
 import { findProduct } from "./catalog.js";
+import { operatorFromEnv, termsPage, privacyPage } from "./legal.js";
 import { createChallenge, verify, createRecaptchaVerifier, type RecaptchaVerifier } from "./captcha.js";
 import { buildReceiptPdf } from "./receipt-pdf.js";
 import { createOutboxMailer, createUnconfiguredMailer, isPlausibleEmail, type Mailer } from "./mailer.js";
 import { createSmtpMailer, parseSmtpUrl } from "./smtp.js";
 import { timingSafeEqual } from "node:crypto";
-import { catalogPage, cartPage, checkoutPage, ordersPage, orderDetailPage, successPage, failurePage, receiptPage, receiptRows, notFoundPage, layout, esc, priceCart, type Ctx } from "./views.js";
+import { catalogPage, legalPage, cartPage, checkoutPage, ordersPage, orderDetailPage, successPage, failurePage, receiptPage, receiptRows, notFoundPage, layout, esc, priceCart, type Ctx } from "./views.js";
 
 export interface MerchantApp {
   server: Server;
@@ -44,6 +45,16 @@ const PUBLIC_DIR = [
   join(process.cwd(), "examples", "reference-merchant", "public"), // bundled serverless function
 ].find((d) => existsSync(d)) ?? join(HERE, "..", "public");
 
+/**
+ * What the shop keeps from SATIM's acknowledgement: what receipts and status
+ * pages need, not the cardholder name, expiry, masked card number, customer IP
+ * or the raw response.
+ */
+function storedAck(ack: AcknowledgeResult): string {
+  const { raw: _raw, cardholderName: _c, expiration: _e, maskedPan: _p, ...kept } = ack;
+  return JSON.stringify(kept);
+}
+
 export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer; store?: OrderStore; recaptcha?: RecaptchaVerifier } = {}): Promise<MerchantApp> {
   const store = deps.store ?? (await OrderStore.open({ url: config.dbUrl, authToken: config.dbAuthToken }));
   const mailer =
@@ -54,6 +65,7 @@ export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer;
         ? createUnconfiguredMailer() // read-only filesystem: no outbox possible
         : createOutboxMailer(config.outboxDir));
   const emailEnabled = mailer.enabled !== false;
+  const operator = operatorFromEnv();
   // Google reCAPTCHA when configured; otherwise the built-in arithmetic check.
   const recaptcha: RecaptchaVerifier | undefined =
     deps.recaptcha ?? (config.recaptchaSiteKey && config.recaptchaSecretKey ? createRecaptchaVerifier(config.recaptchaSecretKey) : undefined);
@@ -94,7 +106,7 @@ export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer;
       console.error(`[merchant] acknowledge failed order=${order.orderNumber} ${isWathiqPayError(e) ? `${e.name} (${e.outcome}): ${e.message}` : String(e)}`);
       return { order: (await store.get(order.orderNumber))!, ack: undefined };
     }
-    const ackJson = JSON.stringify(ack);
+    const ackJson = storedAck(ack);
     const state = classifyPayment(ack);
     const match = paymentMatchesOrder(ack, { orderNumber: order.orderNumber, amount: fromMinorUnits(order.amountMinor) });
     if (state === "paid") {
@@ -129,7 +141,7 @@ export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer;
     }
     const state = classifyPayment(ack);
     if ((state === "refunded" || state === "partially_refunded" || state === "reversed") && state !== order.state) {
-      await store.recordAcknowledgement(order.orderNumber, state, JSON.stringify(ack), `updated from SATIM: ${state}`);
+      await store.recordAcknowledgement(order.orderNumber, state, storedAck(ack), `updated from SATIM: ${state}`);
       console.error(`[merchant] order ${order.orderNumber} is now ${state} on SATIM`);
       return (await store.get(order.orderNumber))!;
     }
@@ -383,6 +395,8 @@ export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer;
       const olderThan = Number(url.searchParams.get("olderThan") ?? config.reconcileAfterSeconds);
       return json(res, 200, await reconcile(olderThan));
     }
+    if ((path === "/conditions" || path === "/terms") && method === "GET") return html(200, legalPage(await ctx(), termsPage(lang, operator)));
+    if ((path === "/confidentialite" || path === "/privacy") && method === "GET") return html(200, legalPage(await ctx(), privacyPage(lang, operator)));
     if (path === "/healthz") return json(res, 200, { ok: true, mode: config.mode });
 
     return html(404, layout(await ctx(), "404", `<h1>404</h1><p>${esc(t.notFound)}</p>`));

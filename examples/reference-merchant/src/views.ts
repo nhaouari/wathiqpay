@@ -2,6 +2,7 @@ import { messages, formatAmount, formatDateTime, type Lang } from "./i18n.js";
 import type { OrderRow, OrderItem, CartLine } from "./store.js";
 import { PRODUCTS, findProduct, productImg, type Product } from "./catalog.js";
 import type { AcknowledgeResult } from "../../../src/index.js";
+import type { LegalPage } from "./legal.js";
 
 export function esc(s: unknown): string {
   return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
@@ -73,6 +74,8 @@ small,.note{color:var(--ink-2);font-size:.85rem}
 .ok{color:var(--ok)}.ko{color:var(--ko)}.hold{color:var(--hold)}
 .state{display:inline-block;padding:.15rem .55rem;border-radius:3px;font-size:.82rem;font-weight:500;background:var(--sand-2);color:var(--ink-2)}.state.paid{background:#EAF3EC;color:var(--ok)}.state.declined,.state.failed,.state.reversed{background:#FBECEC;color:var(--ko)}.state.unknown,.state.review,.state.registered,.state.partially_refunded{background:#FBF1D9;color:var(--hold)}
 .empty{max-width:32rem;padding:2rem 0}
+.site-foot{border-top:1px solid var(--rule);margin-top:2rem}.site-foot .wrap{display:flex;flex-wrap:wrap;gap:.6rem 1.6rem;padding-block:1.4rem 2rem;font-size:.9rem;color:var(--ink-2)}.site-foot a{color:var(--ink-2)}
+.legal{max-width:44rem}.legal-sec{margin-top:1.6rem}.legal-sec h2{font-size:1.15rem;margin-bottom:.4rem}.legal-sec p{color:var(--ink-2)}
 @media(max-width:52rem){.lead,.split{grid-template-columns:1fr}.list{grid-template-columns:repeat(2,1fr);gap:1.5rem 1rem}.summary{position:static}header .wrap{flex-wrap:wrap;gap:.6rem 1.2rem}nav{margin-inline-start:0;flex-wrap:wrap;gap:.9rem;font-size:.92rem}}
 @media(max-width:34rem){.list{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:no-preference){button,.btn{transition:background-color .15s,border-color .15s}}
@@ -109,7 +112,8 @@ export function layout(ctx: Ctx, title: string, body: string): string {
   return `<!doctype html><html lang="${ctx.lang.toLowerCase()}" dir="${t.dir}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)} – ${esc(t.shopTitle)}</title>${fonts}<style>${css}</style></head>
 <body><a class="skip-link" href="#main">${skip}</a>${isDemo(ctx) ? `<aside class="test-banner" aria-label="${esc(demo.title)}"><div class="wrap"><strong>${esc(demo.title)}</strong><p>${esc(demo.text)}</p></div></aside>` : ""}<header><div class="wrap"><a class="wordmark" href="/">${esc(t.shopTitle)}${isDemo(ctx) ? " · DEMO" : ""}</a>
 <nav><a href="/">${esc(t.shop)}</a><a href="/orders">${esc(t.myOrders)}</a><a href="/cart">${esc(t.cart)}<span class="count">${ctx.cartCount}</span></a><span class="lang">${langLinks}</span></nav></div></header>
-<main id="main" tabindex="-1"><div class="wrap">${body}</div></main></body></html>`;
+<main id="main" tabindex="-1"><div class="wrap">${body}</div></main>
+<footer class="site-foot"><div class="wrap"><a href="/conditions">${esc(t.legalTerms)}</a><a href="/confidentialite">${esc(t.legalPrivacy)}</a><span>${esc(t.support)}</span></div></footer></body></html>`;
 }
 
 function addForm(t: (typeof messages)["FR"], p: Product): string {
@@ -198,7 +202,7 @@ export function checkoutPage(ctx: Ctx, cart: { lines: PricedLine[]; totalMinor: 
   <label class="field"><span>${esc(t.phone)}</span><input type="text" name="phone" value="${esc(opts.customer?.phone ?? "")}" required autocomplete="tel" inputmode="tel" placeholder="${esc(t.phoneHint)}"></label>
   <label class="field"><span>${esc(t.address)}</span><input type="text" name="address" value="${esc(opts.customer?.address ?? "")}" autocomplete="street-address" maxlength="200"></label>
   ${ctx.emailEnabled !== false ? `<label class="field"><span>${esc(t.customerEmail)}</span><input type="email" name="email" value="${esc(opts.customer?.email ?? "")}" autocomplete="email"></label>` : ""}
-  <div class="terms"><h2>${esc(t.terms)}</h2><p>${esc(t.termsText)}</p><label class="check"><input type="checkbox" name="terms" value="yes" required><span>${esc(t.acceptTerms)}</span></label></div>
+  <div class="terms"><h2>${esc(t.terms)}</h2><p>${esc(t.termsText)}</p><p><a href="/conditions" target="_blank" rel="noopener">${esc(t.readFullTerms)}</a> · <a href="/confidentialite" target="_blank" rel="noopener">${esc(t.legalPrivacy)}</a></p><label class="check"><input type="checkbox" name="terms" value="yes" required><span>${esc(t.acceptTerms)}</span></label></div>
   ${"kind" in captcha && captcha.kind === "recaptcha"
     ? `<div class="captcha recaptcha"><div class="g-recaptcha" data-sitekey="${esc(captcha.siteKey)}"></div></div><script src="https://www.google.com/recaptcha/api.js?hl=${ctx.lang.toLowerCase()}" async defer></script>`
     : `<div class="captcha"><label for="captcha">${esc(t.captcha)} <strong>${esc((captcha as { question: string }).question)}</strong> ?</label><input id="captcha" type="text" name="captcha" required inputmode="numeric" autocomplete="off"><input type="hidden" name="captchaToken" value="${esc((captcha as { token: string }).token)}"></div>`}
@@ -342,6 +346,13 @@ export function failurePage(ctx: Ctx, order: OrderRow, ack: AcknowledgeResult | 
 <div class="receipt"><dl><dt>${esc(t.orderNumber)}</dt><dd>${esc(order.orderNumber)}</dd>${order.satimOrderId ? `<dt>${esc(t.transactionId)}</dt><dd>${esc(order.satimOrderId)}</dd>` : ""}<div class="big"><dt>${esc(t.amount)}</dt><dd class="money">${esc(formatAmount(order.amountMinor, ctx.lang))}</dd></div></dl></div>
 <p class="support">${esc(t.support)}</p><div class="actions"><a class="btn" href="/cart">${esc(t.cart)}</a><a class="btn quiet" href="/">${esc(t.backToShop)}</a></div></div>`,
   );
+}
+
+export function legalPage(ctx: Ctx, page: LegalPage): string {
+  const sections = page.sections
+    .map((sec) => `<section class="legal-sec"><h2>${esc(sec.heading)}</h2>${sec.paragraphs.map((p) => `<p>${esc(p)}</p>`).join("")}</section>`)
+    .join("");
+  return layout(ctx, page.title, `<article class="legal"><h1>${esc(page.title)}</h1><p class="note">${esc(page.updated)}</p><p class="lede">${esc(page.intro)}</p>${sections}</article>`);
 }
 
 export function notFoundPage(ctx: Ctx): string {

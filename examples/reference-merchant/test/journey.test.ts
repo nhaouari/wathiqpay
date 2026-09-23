@@ -289,6 +289,40 @@ describe("reference merchant journey against the simulator", () => {
     assert.equal(await app.store.fulfilmentCount(ref), 0);
   });
 
+  test("terms and privacy pages exist in three languages and are linked from checkout and every footer", async () => {
+    const b = new Browser();
+    for (const [lang, terms, privacy] of [["FR", "Conditions générales de vente et de paiement en ligne", "Politique de confidentialité"], ["EN", "Terms of sale and online payment", "Privacy policy"], ["AR", "شروط البيع وشروط الدفع الإلكتروني", "سياسة الخصوصية"]] as const) {
+      await b.go(`${origin}/lang/${lang}?next=/`);
+      const t = await b.go(`${origin}/conditions`);
+      assert.equal(t.status, 200);
+      assert.ok(t.body.includes(terms), `${lang} terms title`);
+      assert.match(t.body, /3020/);
+      const p = await b.go(`${origin}/confidentialite`);
+      assert.ok(p.body.includes(privacy), `${lang} privacy title`);
+      assert.match(p.body, /reCAPTCHA/);
+      assert.match(p.body, /18-07/);
+    }
+    await b.go(`${origin}/lang/FR?next=/`);
+    const home = await b.go(`${origin}/`);
+    assert.match(home.body, /<footer class="site-foot">[\s\S]*href="\/conditions"[\s\S]*href="\/confidentialite"/);
+    await b.go(`${origin}/cart/add`, { method: "POST", form: { product: "dates", quantity: "1" } });
+    const co = await b.go(`${origin}/checkout`);
+    assert.match(co.body, /class="terms"[\s\S]*href="\/conditions"/);
+  });
+
+  test("stored acknowledgements keep no cardholder name, expiry, masked card or raw response", async () => {
+    const b = new Browser();
+    const hosted = await checkout(b);
+    const { ref } = refFromHosted(hosted);
+    await b.go(`${hosted.url}/decide`, { method: "POST", form: { outcome: "paid" } });
+    const order = (await app.store.get(ref))!;
+    const kept = JSON.parse(order.ackJson!);
+    for (const k of ["raw", "cardholderName", "expiration", "maskedPan"]) assert.equal(k in kept, false, k);
+    assert.equal(kept.approvalCode, "303030", "receipt data is kept");
+    const receipt = await b.go(`${origin}/orders/${ref}/receipt`);
+    assert.match(receipt.body, /303030/);
+  });
+
   test("undocumented status 1 is held as unknown, not fulfilled", async () => {
     const b = new Browser();
     const hosted = await checkout(b);

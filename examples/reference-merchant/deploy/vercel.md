@@ -31,6 +31,7 @@ The schema is created automatically on the first request.
 | `MERCHANT_ADMIN_TOKEN` | `openssl rand -hex 32` |
 | `MERCHANT_CAPTCHA_SECRET` | `openssl rand -hex 32` |
 | `RECAPTCHA_SITE_KEY`, `RECAPTCHA_SECRET_KEY` | Google reCAPTCHA v2 "I'm not a robot" checkbox keys for `demo.wathiqpay.com` (create them at google.com/recaptcha/admin). Without them the arithmetic check is used |
+| `LEGAL_NAME`, `LEGAL_ADDRESS`, `LEGAL_RC`, `LEGAL_EMAIL`, `LEGAL_PHONE` | optional; the operator identity shown on /conditions and /confidentialite (defaults to "WathiqPay" and the contact form at wathiqpay.com) |
 | `CRON_SECRET` | same value as `MERCHANT_ADMIN_TOKEN` (Vercel sends it on cron calls) |
 | `SATIM_USERNAME`, `SATIM_PASSWORD`, `SATIM_TERMINAL_ID` | certification credentials |
 | `SMTP_URL`, `SMTP_FROM` | required by SATIM's checklist (e-mail receipt). With Resend: `smtps://resend:<API key>@smtp.resend.com:465` and `Maison Wathiq <recus@wathiqpay.com>` after verifying the domain in Resend. Without them the e-mail form is hidden |
