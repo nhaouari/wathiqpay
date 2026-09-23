@@ -1,0 +1,333 @@
+[
+ {
+  "key": "card-limit",
+  "title": "Plafond de la carte dépassé",
+  "card": "****1219",
+  "expiry": "01/2027",
+  "time": "2026-09-23 02:23:45 +0200",
+  "shots": [
+   "card-limit-1-satim-page.png",
+   "card-limit-2-3ds-page.png",
+   "card-limit-4-shop-result.png"
+  ],
+  "amount": "1 200,00 DZD",
+  "pay_button_enabled": true,
+  "ref": "WSVFRLYTE3",
+  "shop_route": "/payment/return",
+  "shop_title": "Paiement accepté",
+  "shop_message": "Votre paiement a été accepté.",
+  "satim_order_id": "e6nuIizHchOYP4AADLGK",
+  "classified": "paid",
+  "satim_response": {
+   "expiration": "[redacted]",
+   "cardholderName": "[redacted]",
+   "depositAmount": 120000,
+   "currency": "012",
+   "authorizationResponseId": "510150",
+   "approvalCode": "510150",
+   "actionCode": 0,
+   "actionCodeDescription": "Your payment was accepted . Error code : 0.",
+   "ErrorCode": "0",
+   "ErrorMessage": "Success",
+   "OrderStatus": 2,
+   "OrderNumber": "WSVFRLYTE3",
+   "Pan": "[redacted]",
+   "Amount": 120000,
+   "Description": "Dattes Deglet Nour 1 kg x1",
+   "params": {
+    "respCode_desc": "Votre paiement a été accepté.",
+    "udf1": "WSVFRLYTE3",
+    "respCode": "00"
+   },
+   "SvfeResponse": "00"
+  }
+ },
+ {
+  "key": "card-limit-high",
+  "title": "Plafond de la carte dépassé (montant élevé)",
+  "card": "****1219",
+  "expiry": "01/2027",
+  "time": "2026-09-23 02:23:59 +0200",
+  "shots": [
+   "card-limit-high-1-satim-page.png",
+   "card-limit-high-2-3ds-page.png",
+   "card-limit-high-4-shop-result.png"
+  ],
+  "amount": "2 376 000,00 DZD",
+  "pay_button_enabled": true,
+  "ref": "WK8R2HLASE",
+  "shop_route": "/payment/return",
+  "shop_title": "Paiement accepté",
+  "shop_message": "Votre paiement a été accepté.",
+  "satim_order_id": "6IgxQSFMzdKFAQAADLGL",
+  "classified": "paid",
+  "satim_response": {
+   "expiration": "[redacted]",
+   "cardholderName": "[redacted]",
+   "depositAmount": 237600000,
+   "currency": "012",
+   "authorizationResponseId": "510180",
+   "approvalCode": "510180",
+   "actionCode": 0,
+   "actionCodeDescription": "Your payment was accepted . Error code : 0.",
+   "ErrorCode": "0",
+   "ErrorMessage": "Success",
+   "OrderStatus": 2,
+   "OrderNumber": "WK8R2HLASE",
+   "Pan": "[redacted]",
+   "Amount": 237600000,
+   "Description": "Tapis berb&egrave;re 120 &times; 180 cm x99",
+   "params": {
+    "respCode_desc": "Votre paiement a été accepté.",
+    "udf1": "WK8R2HLASE",
+    "respCode": "00"
+   },
+   "SvfeResponse": "00"
+  }
+ },
+ {
+  "key": "terminal-limit",
+  "title": "Plafond du terminal dépassé",
+  "card": "****7314",
+  "expiry": "01/2027",
+  "time": "2026-09-23 02:24:10 +0200",
+  "shots": [
+   "terminal-limit-1-satim-page.png",
+   "terminal-limit-2-3ds-page.png",
+   "terminal-limit-4-shop-result.png"
+  ],
+  "amount": "1 200,00 DZD",
+  "pay_button_enabled": true,
+  "ref": "WMPNMZXRZK",
+  "shop_route": "/payment/return",
+  "shop_title": "Paiement accepté",
+  "shop_message": "Votre paiement a été accepté.",
+  "satim_order_id": "e9w0VRAGvLGKEIAADLGM",
+  "classified": "paid",
+  "satim_response": {
+   "expiration": "[redacted]",
+   "cardholderName": "[redacted]",
+   "depositAmount": 120000,
+   "currency": "012",
+   "authorizationResponseId": "510200",
+   "approvalCode": "510200",
+   "actionCode": 0,
+   "actionCodeDescription": "Your payment was accepted . Error code : 0.",
+   "ErrorCode": "0",
+   "ErrorMessage": "Success",
+   "OrderStatus": 2,
+   "OrderNumber": "WMPNMZXRZK",
+   "Pan": "[redacted]",
+   "Amount": 120000,
+   "Description": "Dattes Deglet Nour 1 kg x1",
+   "params": {
+    "respCode_desc": "Votre paiement a été accepté.",
+    "udf1": "WMPNMZXRZK",
+    "respCode": "00"
+   },
+   "SvfeResponse": "00"
+  }
+ },
+ {
+  "key": "terminal-limit-high",
+  "title": "Plafond du terminal dépassé (montant élevé)",
+  "card": "****7314",
+  "expiry": "01/2027",
+  "time": "2026-09-23 02:24:21 +0200",
+  "shots": [
+   "terminal-limit-high-1-satim-page.png",
+   "terminal-limit-high-2-3ds-page.png",
+   "terminal-limit-high-4-shop-result.png"
+  ],
+  "amount": "2 376 000,00 DZD",
+  "pay_button_enabled": true,
+  "ref": "WQNBBQHS4V",
+  "shop_route": "/payment/return",
+  "shop_title": "Paiement accepté",
+  "shop_message": "Votre paiement a été accepté.",
+  "satim_order_id": "8DjeVORmH8JSXEAADLGN",
+  "classified": "paid",
+  "satim_response": {
+   "expiration": "[redacted]",
+   "cardholderName": "[redacted]",
+   "depositAmount": 237600000,
+   "currency": "012",
+   "authorizationResponseId": "510230",
+   "approvalCode": "510230",
+   "actionCode": 0,
+   "actionCodeDescription": "Your payment was accepted . Error code : 0.",
+   "ErrorCode": "0",
+   "ErrorMessage": "Success",
+   "OrderStatus": 2,
+   "OrderNumber": "WQNBBQHS4V",
+   "Pan": "[redacted]",
+   "Amount": 237600000,
+   "Description": "Tapis berb&egrave;re 120 &times; 180 cm x99",
+   "params": {
+    "respCode_desc": "Votre paiement a été accepté.",
+    "udf1": "WQNBBQHS4V",
+    "respCode": "00"
+   },
+   "SvfeResponse": "00"
+  }
+ },
+ {
+  "key": "expired",
+  "title": "Carte expirée",
+  "card": "****6615",
+  "expiry": "12/2022",
+  "time": "2026-09-23 02:24:31 +0200",
+  "shots": [
+   "expired-1-satim-page.png",
+   "expired-2-3ds-page.png",
+   "expired-4-shop-result.png"
+  ],
+  "amount": "1 200,00 DZD",
+  "pay_button_enabled": true,
+  "ref": "WQK63SLGVR",
+  "shop_route": "/payment/return",
+  "shop_title": "Paiement accepté",
+  "shop_message": "Votre paiement a été accepté.",
+  "satim_order_id": "L7NwiqmLGa5F7IAADLGO",
+  "classified": "paid",
+  "satim_response": {
+   "expiration": "[redacted]",
+   "cardholderName": "[redacted]",
+   "depositAmount": 120000,
+   "currency": "012",
+   "authorizationResponseId": "510250",
+   "approvalCode": "510250",
+   "actionCode": 0,
+   "actionCodeDescription": "Your payment was accepted . Error code : 0.",
+   "ErrorCode": "0",
+   "ErrorMessage": "Success",
+   "OrderStatus": 2,
+   "OrderNumber": "WQK63SLGVR",
+   "Pan": "[redacted]",
+   "Amount": 120000,
+   "Description": "Dattes Deglet Nour 1 kg x1",
+   "params": {
+    "respCode_desc": "Votre paiement a été accepté.",
+    "udf1": "WQK63SLGVR",
+    "respCode": "00"
+   },
+   "SvfeResponse": "00"
+  }
+ },
+ {
+  "key": "nonexistent",
+  "title": "Carte inexistante (numéro valide au contrôle de Luhn)",
+  "card": "****3925",
+  "expiry": "01/2025",
+  "time": "2026-09-23 02:24:41 +0200",
+  "shots": [
+   "nonexistent-1-satim-page.png",
+   "nonexistent-4-shop-result.png"
+  ],
+  "amount": "1 200,00 DZD",
+  "pay_button_enabled": true,
+  "ref": "W946X4FQ7R",
+  "shop_route": "/payment/fail",
+  "shop_title": "Paiement refusé",
+  "shop_message": "Card blocked for E-payments. Contact your bank Error code :2003.",
+  "satim_order_id": "QfBoWAoIpuqfU4AADLGP",
+  "classified": "declined",
+  "satim_response": {
+   "expiration": "[redacted]",
+   "cardholderName": "[redacted]",
+   "depositAmount": 0,
+   "currency": "012",
+   "actionCode": 2003,
+   "actionCodeDescription": "Card blocked for E-payments. Contact your bank Error code :2003.",
+   "ErrorCode": "2",
+   "ErrorMessage": "Payment is declined",
+   "OrderStatus": 6,
+   "OrderNumber": "W946X4FQ7R",
+   "Pan": "[redacted]",
+   "Amount": 120000,
+   "Description": "Dattes Deglet Nour 1 kg x1"
+  }
+ },
+ {
+  "key": "nonexistent-as-published",
+  "title": "Carte inexistante (numéro publié sur le portail)",
+  "card": "****3927",
+  "expiry": "01/2025",
+  "time": "2026-09-23 02:24:50 +0200",
+  "shots": [
+   "nonexistent-as-published-1-satim-page.png",
+   "nonexistent-as-published-2-pay-button-disabled.png"
+  ],
+  "amount": "1 200,00 DZD",
+  "pay_button_enabled": false,
+  "outcome": "Paiement button stays disabled; the card cannot be submitted"
+ },
+ {
+  "key": "wrong-password",
+  "title": "Mot de passe erroné (carte valide)",
+  "card": "****7215",
+  "expiry": "01/2027",
+  "time": "2026-09-23 02:24:59 +0200",
+  "shots": [
+   "wrong-password-1-satim-page.png",
+   "wrong-password-2-3ds-page.png",
+   "wrong-password-3-after-wrong-password.png",
+   "wrong-password-4-shop-result.png"
+  ],
+  "amount": "1 200,00 DZD",
+  "pay_button_enabled": true,
+  "after_wrong_password": "Introduisez votre mot de passe static de payement en ligne : Commerçant : WATHIQ PAY Montant : 1200.00 Algerian Dinar Date : 23.09.2026 Carte : ************7215 Mot de passe static : Valider Annuler",
+  "ref": "WB8982NHPX",
+  "shop_route": "/payment/fail",
+  "shop_title": "Paiement refusé",
+  "shop_message": "TDS_AUTH_FAILED",
+  "satim_order_id": "2e1q36R5neLM4MAADLGR",
+  "classified": "declined",
+  "satim_response": {
+   "expiration": "[redacted]",
+   "cardholderName": "[redacted]",
+   "depositAmount": 0,
+   "currency": "012",
+   "actionCode": -2006,
+   "actionCodeDescription": "TDS_AUTH_FAILED",
+   "ErrorCode": "2",
+   "ErrorMessage": "Payment is declined",
+   "OrderStatus": 6,
+   "OrderNumber": "WB8982NHPX",
+   "Pan": "[redacted]",
+   "Amount": 120000,
+   "Description": "Dattes Deglet Nour 1 kg x1"
+  }
+ },
+ {
+  "key": "cancel",
+  "title": "Annulation par le client sur la page SATIM",
+  "card": "****7215",
+  "expiry": "01/2027",
+  "time": "2026-09-23 02:25:15 +0200",
+  "shots": [
+   "cancel-1-satim-page.png",
+   "cancel-4-shop-result.png"
+  ],
+  "amount": "1 200,00 DZD",
+  "ref": "WZZQWTW3B4",
+  "shop_route": "/payment/fail",
+  "shop_title": "Paiement refusé",
+  "shop_message": "Operation cancelled by user",
+  "satim_order_id": "sKMGxUl0CyVq4MAADLGS",
+  "classified": "declined",
+  "satim_response": {
+   "depositAmount": 0,
+   "currency": "012",
+   "actionCode": 342034,
+   "actionCodeDescription": "Operation cancelled by user",
+   "ErrorCode": "2",
+   "ErrorMessage": "Payment is declined",
+   "OrderStatus": 6,
+   "OrderNumber": "WZZQWTW3B4",
+   "Pan": "[redacted]",
+   "Amount": 120000,
+   "Description": "Dattes Deglet Nour 1 kg x1"
+  }
+ }
+]

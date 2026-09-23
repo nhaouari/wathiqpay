@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WathiqPay – Preuves des cas à revoir avec SATIM</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{--paper:#FAF9F6;--ink:#1E2226;--muted:#5B6168;--rule:#E1DFD8;--band:#F1EFE9;--blue:#1B4F86;--pass:#2E6B3F;--pass-bg:#E7F1EA;--warn:#8A5A00;--warn-bg:#FBF1D9;--na-bg:#ECEBE7;
+--sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;--mono:"IBM Plex Mono",ui-monospace,Menlo,monospace}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.6;padding:2.5rem clamp(16px,4vw,40px) 4rem}
+main{max-width:60rem;margin:0 auto;display:grid;gap:2.4rem}h1{font-size:1.8rem;line-height:1.2;margin:0}h2{font-size:1.2rem;margin:0 0 .8rem;color:var(--blue);display:flex;gap:.7rem;align-items:center;flex-wrap:wrap}
+p{margin:.3rem 0;max-width:70ch}.code{font-family:var(--mono);font-size:.88em}
+.intro{display:grid;gap:.8rem}.summary{border-collapse:collapse;width:100%}.summary th,.summary td{text-align:left;padding:.45rem .6rem;border-bottom:1px solid var(--rule);vertical-align:top}.summary thead th{color:var(--muted);font-weight:500;font-size:.85rem;border-bottom-color:var(--ink)}
+.pill{font-size:.78rem;font-weight:500;padding:.1rem .55rem;border-radius:3px;white-space:nowrap}.pill.pass{background:var(--pass-bg);color:var(--pass)}.pill.warn{background:var(--warn-bg);color:var(--warn)}.pill.na{background:var(--na-bg);color:var(--muted)}
+.case{border-top:2px solid var(--ink);padding-top:1.2rem}.case.warn{border-top-color:var(--warn)}
+dl.meta{display:grid;grid-template-columns:max-content 1fr;gap:.25rem 1.2rem;margin:0 0 .8rem;padding:.9rem 1.1rem;background:var(--band);border-radius:4px}dl.meta dt{color:var(--muted)}dl.meta dd{margin:0;overflow-wrap:anywhere}
+table.fields{border-collapse:collapse;margin:.8rem 0;font-size:.9rem}table.fields caption{text-align:left;color:var(--muted);font-size:.85rem;padding-bottom:.3rem}table.fields th,table.fields td{text-align:left;padding:.25rem .8rem .25rem 0;border-bottom:1px solid var(--rule)}table.fields th{font-weight:500}
+details{margin:.5rem 0}pre{background:#fff;border:1px solid var(--rule);padding:.8rem;overflow-x:auto;font-size:.8rem;font-family:var(--mono)}
+.shots{display:grid;grid-template-columns:repeat(auto-fill,minmax(16rem,1fr));gap:.9rem;margin-top:.8rem}figure{margin:0}figure img{width:100%;border:1px solid var(--rule);border-radius:4px;display:block}figcaption{font-size:.82rem;color:var(--muted);margin-top:.25rem}
+ol.asks{padding-left:1.3rem;display:grid;gap:.6rem;max-width:70ch}
+@media(max-width:560px){dl.meta{grid-template-columns:1fr}}
+@media print{details{display:none}.shots{grid-template-columns:1fr 1fr}}
+</style></head>
+<body><main>
+<header class="intro">
+  <h1>WathiqPay : preuves des cas à revoir avec SATIM</h1>
+  <p>Tests exécutés le 23 septembre 2026 sur le site de démonstration <span class="code">https://demo.wathiqpay.com</span>, environnement de certification SATIM (API <span class="code">test2.satim.dz</span>). Chaque cas est un achat réel sur le site : panier, paiement, page SATIM, retour, confirmation par le serveur (<span class="code">acknowledgeTransaction.do</span>).</p>
+  <p>Les numéros de carte, codes CVV2 et mots de passe ne figurent pas dans ce document. Les captures sont prises avant la saisie de la carte ou sur des pages où SATIM masque le numéro.</p>
+</header>
+
+<section>
+  <h2>Synthèse</h2>
+  <table class="summary"><thead><tr><th>Cas de la checklist</th><th>Attendu</th><th>Obtenu</th><th>Conclusion</th></tr></thead><tbody>
+  <tr><td>Dépassement du plafond de la carte</td><td>Refusé</td><td>Accepté (1 200 et 2 376 000 DZD)</td><td><span class="pill warn">Donnée de test SATIM à revoir</span></td></tr>
+  <tr><td>Dépassement du plafond du terminal</td><td>Refusé</td><td>Accepté (1 200 et 2 376 000 DZD)</td><td><span class="pill warn">Donnée de test SATIM à revoir</span></td></tr>
+  <tr><td>Carte expirée</td><td>Refusé</td><td>Accepté</td><td><span class="pill warn">Donnée de test SATIM à revoir</span></td></tr>
+  <tr><td>Carte inexistante sur le serveur de l'émetteur</td><td>Refusé</td><td>Refusé avec un numéro valide ; numéro publié non soumissible</td><td><span class="pill pass">Conforme</span></td></tr>
+  <tr><td>Mot de passe erroné</td><td>Refusé</td><td>Refusé (TDS_AUTH_FAILED)</td><td><span class="pill pass">Conforme</span></td></tr>
+  <tr><td>Annulation d'une transaction</td><td>Annulée</td><td>Non payée (Operation cancelled by user)</td><td><span class="pill pass">Conforme</span></td></tr>
+  </tbody></table>
+  <p>Dans tous les cas, le site marchand affiche fidèlement la réponse de SATIM et ne livre la commande que si SATIM renvoie respCode 00, ErrorCode 0 et OrderStatus 2.</p>
+</section>
+
+
+<section class="case warn" id="card-limit">
+  <h2>Plafond de la carte dépassé <span class="pill warn">Accepté par SATIM</span></h2>
+  <dl class="meta">
+    <dt>Attendu (checklist SATIM)</dt><dd>Paiement refusé</dd>
+    <dt>Obtenu</dt><dd><strong>Paiement accepté</strong></dd>
+    <dt>Date et heure</dt><dd>2026-09-23 02:23:45 +0200</dd>
+    <dt>Montant</dt><dd>1 200,00 DZD</dd>
+    <dt>Carte</dt><dd class="code">****1219, expiration 01/2027</dd>
+    <dt>N° de commande (site)</dt><dd class="code">WSVFRLYTE3</dd>
+    <dt>orderId SATIM</dt><dd class="code">e6nuIizHchOYP4AADLGK</dd>
+    <dt>Affiché au client</dt><dd>Paiement accepté — Votre paiement a été accepté.</dd>
+  </dl>
+  <p>Le montant est accepté et débité (OrderStatus 2, respCode 00). Aucun refus lié au plafond.</p>
+  <table class='fields'><caption>Réponse de acknowledgeTransaction.do</caption><tr><th>ErrorCode</th><td class='code'>0</td></tr><tr><th>OrderStatus</th><td class='code'>2</td></tr><tr><th>actionCode</th><td class='code'>0</td></tr><tr><th>actionCodeDescription</th><td class='code'>Your payment was accepted . Error code : 0.</td></tr><tr><th>Amount</th><td class='code'>120000</td></tr><tr><th>depositAmount</th><td class='code'>120000</td></tr><tr><th>approvalCode</th><td class='code'>510150</td></tr><tr><th>OrderNumber</th><td class='code'>WSVFRLYTE3</td></tr><tr><th>params.respCode</th><td class='code'>00</td></tr><tr><th>params.respCode_desc</th><td class='code'>Votre paiement a été accepté.</td></tr></table>
+  <details><summary>Réponse SATIM complète (nom du porteur, expiration et PAN masqués)</summary><pre>{
+ &quot;expiration&quot;: &quot;[redacted]&quot;,
+ &quot;cardholderName&quot;: &quot;[redacted]&quot;,
+ &quot;depositAmount&quot;: 120000,
+ &quot;currency&quot;: &quot;012&quot;,
+ &quot;authorizationResponseId&quot;: &quot;510150&quot;,
+ &quot;approvalCode&quot;: &quot;510150&quot;,
+ &quot;actionCode&quot;: 0,
+ &quot;actionCodeDescription&quot;: &quot;Your payment was accepted . Error code : 0.&quot;,
+ &quot;ErrorCode&quot;: &quot;0&quot;,
+ &quot;ErrorMessage&quot;: &quot;Success&quot;,
+ &quot;OrderStatus&quot;: 2,
+ &quot;OrderNumber&quot;: &quot;WSVFRLYTE3&quot;,
+ &quot;Pan&quot;: &quot;[redacted]&quot;,
+ &quot;Amount&quot;: 120000,
+ &quot;Description&quot;: &quot;Dattes Deglet Nour 1 kg x1&quot;,
+ &quot;params&quot;: {
+  &quot;respCode_desc&quot;: &quot;Votre paiement a été accepté.&quot;,
+  &quot;udf1&quot;: &quot;WSVFRLYTE3&quot;,
+  &quot;respCode&quot;: &quot;00&quot;
+ },
+ &quot;SvfeResponse&quot;: &quot;00&quot;
+}</pre></details>
+  <div class="shots"><figure><img src='evidence/2026-09-23/card-limit-1-satim-page.png' alt='Plafond de la carte dépassé : card-limit-1-satim-page.png' loading='lazy'><figcaption>Page de paiement SATIM (avant saisie)</figcaption></figure><figure><img src='evidence/2026-09-23/card-limit-2-3ds-page.png' alt='Plafond de la carte dépassé : card-limit-2-3ds-page.png' loading='lazy'><figcaption>Page 3-D Secure (carte masquée)</figcaption></figure><figure><img src='evidence/2026-09-23/card-limit-4-shop-result.png' alt='Plafond de la carte dépassé : card-limit-4-shop-result.png' loading='lazy'><figcaption>Page de résultat du site marchand</figcaption></figure></div>
+</section>
+<section class="case warn" id="card-limit-high">
+  <h2>Plafond de la carte dépassé (montant élevé) <span class="pill warn">Accepté par SATIM</span></h2>
+  <dl class="meta">
+    <dt>Attendu (checklist SATIM)</dt><dd>Paiement refusé</dd>
+    <dt>Obtenu</dt><dd><strong>Paiement accepté</strong></dd>
+    <dt>Date et heure</dt><dd>2026-09-23 02:23:59 +0200</dd>
+    <dt>Montant</dt><dd>2 376 000,00 DZD</dd>
+    <dt>Carte</dt><dd class="code">****1219, expiration 01/2027</dd>
+    <dt>N° de commande (site)</dt><dd class="code">WK8R2HLASE</dd>
+    <dt>orderId SATIM</dt><dd class="code">6IgxQSFMzdKFAQAADLGL</dd>
+    <dt>Affiché au client</dt><dd>Paiement accepté — Votre paiement a été accepté.</dd>
+  </dl>
+  <p>Même carte avec une commande de 2 376 000,00 DZD : toujours acceptée.</p>
+  <table class='fields'><caption>Réponse de acknowledgeTransaction.do</caption><tr><th>ErrorCode</th><td class='code'>0</td></tr><tr><th>OrderStatus</th><td class='code'>2</td></tr><tr><th>actionCode</th><td class='code'>0</td></tr><tr><th>actionCodeDescription</th><td class='code'>Your payment was accepted . Error code : 0.</td></tr><tr><th>Amount</th><td class='code'>237600000</td></tr><tr><th>depositAmount</th><td class='code'>237600000</td></tr><tr><th>approvalCode</th><td class='code'>510180</td></tr><tr><th>OrderNumber</th><td class='code'>WK8R2HLASE</td></tr><tr><th>params.respCode</th><td class='code'>00</td></tr><tr><th>params.respCode_desc</th><td class='code'>Votre paiement a été accepté.</td></tr></table>
+  <details><summary>Réponse SATIM complète (nom du porteur, expiration et PAN masqués)</summary><pre>{
+ &quot;expiration&quot;: &quot;[redacted]&quot;,
+ &quot;cardholderName&quot;: &quot;[redacted]&quot;,
+ &quot;depositAmount&quot;: 237600000,
+ &quot;currency&quot;: &quot;012&quot;,
+ &quot;authorizationResponseId&quot;: &quot;510180&quot;,
+ &quot;approvalCode&quot;: &quot;510180&quot;,
+ &quot;actionCode&quot;: 0,
+ &quot;actionCodeDescription&quot;: &quot;Your payment was accepted . Error code : 0.&quot;,
+ &quot;ErrorCode&quot;: &quot;0&quot;,
+ &quot;ErrorMessage&quot;: &quot;Success&quot;,
+ &quot;OrderStatus&quot;: 2,
+ &quot;OrderNumber&quot;: &quot;WK8R2HLASE&quot;,
+ &quot;Pan&quot;: &quot;[redacted]&quot;,
+ &quot;Amount&quot;: 237600000,
+ &quot;Description&quot;: &quot;Tapis berb&amp;egrave;re 120 &amp;times; 180 cm x99&quot;,
+ &quot;params&quot;: {
+  &quot;respCode_desc&quot;: &quot;Votre paiement a été accepté.&quot;,
+  &quot;udf1&quot;: &quot;WK8R2HLASE&quot;,
+  &quot;respCode&quot;: &quot;00&quot;
+ },
+ &quot;SvfeResponse&quot;: &quot;00&quot;
+}</pre></details>
+  <div class="shots"><figure><img src='evidence/2026-09-23/card-limit-high-1-satim-page.png' alt='Plafond de la carte dépassé (montant élevé) : card-limit-high-1-satim-page.png' loading='lazy'><figcaption>Page de paiement SATIM (avant saisie)</figcaption></figure><figure><img src='evidence/2026-09-23/card-limit-high-2-3ds-page.png' alt='Plafond de la carte dépassé (montant élevé) : card-limit-high-2-3ds-page.png' loading='lazy'><figcaption>Page 3-D Secure (carte masquée)</figcaption></figure><figure><img src='evidence/2026-09-23/card-limit-high-4-shop-result.png' alt='Plafond de la carte dépassé (montant élevé) : card-limit-high-4-shop-result.png' loading='lazy'><figcaption>Page de résultat du site marchand</figcaption></figure></div>
+</section>
+<section class="case warn" id="terminal-limit">
+  <h2>Plafond du terminal dépassé <span class="pill warn">Accepté par SATIM</span></h2>
+  <dl class="meta">
+    <dt>Attendu (checklist SATIM)</dt><dd>Paiement refusé</dd>
+    <dt>Obtenu</dt><dd><strong>Paiement accepté</strong></dd>
+    <dt>Date et heure</dt><dd>2026-09-23 02:24:10 +0200</dd>
+    <dt>Montant</dt><dd>1 200,00 DZD</dd>
+    <dt>Carte</dt><dd class="code">****7314, expiration 01/2027</dd>
+    <dt>N° de commande (site)</dt><dd class="code">WMPNMZXRZK</dd>
+    <dt>orderId SATIM</dt><dd class="code">e9w0VRAGvLGKEIAADLGM</dd>
+    <dt>Affiché au client</dt><dd>Paiement accepté — Votre paiement a été accepté.</dd>
+  </dl>
+  <p>Accepté à 1 200,00 DZD.</p>
+  <table class='fields'><caption>Réponse de acknowledgeTransaction.do</caption><tr><th>ErrorCode</th><td class='code'>0</td></tr><tr><th>OrderStatus</th><td class='code'>2</td></tr><tr><th>actionCode</th><td class='code'>0</td></tr><tr><th>actionCodeDescription</th><td class='code'>Your payment was accepted . Error code : 0.</td></tr><tr><th>Amount</th><td class='code'>120000</td></tr><tr><th>depositAmount</th><td class='code'>120000</td></tr><tr><th>approvalCode</th><td class='code'>510200</td></tr><tr><th>OrderNumber</th><td class='code'>WMPNMZXRZK</td></tr><tr><th>params.respCode</th><td class='code'>00</td></tr><tr><th>params.respCode_desc</th><td class='code'>Votre paiement a été accepté.</td></tr></table>
+  <details><summary>Réponse SATIM complète (nom du porteur, expiration et PAN masqués)</summary><pre>{
+ &quot;expiration&quot;: &quot;[redacted]&quot;,
+ &quot;cardholderName&quot;: &quot;[redacted]&quot;,
+ &quot;depositAmount&quot;: 120000,
+ &quot;currency&quot;: &quot;012&quot;,
+ &quot;authorizationResponseId&quot;: &quot;510200&quot;,
+ &quot;approvalCode&quot;: &quot;510200&quot;,
+ &quot;actionCode&quot;: 0,
+ &quot;actionCodeDescription&quot;: &quot;Your payment was accepted . Error code : 0.&quot;,
+ &quot;ErrorCode&quot;: &quot;0&quot;,
+ &quot;ErrorMessage&quot;: &quot;Success&quot;,
+ &quot;OrderStatus&quot;: 2,
+ &quot;OrderNumber&quot;: &quot;WMPNMZXRZK&quot;,
+ &quot;Pan&quot;: &quot;[redacted]&quot;,
+ &quot;Amount&quot;: 120000,
+ &quot;Description&quot;: &quot;Dattes Deglet Nour 1 kg x1&quot;,
+ &quot;params&quot;: {
+  &quot;respCode_desc&quot;: &quot;Votre paiement a été accepté.&quot;,
+  &quot;udf1&quot;: &quot;WMPNMZXRZK&quot;,
+  &quot;respCode&quot;: &quot;00&quot;
+ },
+ &quot;SvfeResponse&quot;: &quot;00&quot;
+}</pre></details>
+  <div class="shots"><figure><img src='evidence/2026-09-23/terminal-limit-1-satim-page.png' alt='Plafond du terminal dépassé : terminal-limit-1-satim-page.png' loading='lazy'><figcaption>Page de paiement SATIM (avant saisie)</figcaption></figure><figure><img src='evidence/2026-09-23/terminal-limit-2-3ds-page.png' alt='Plafond du terminal dépassé : terminal-limit-2-3ds-page.png' loading='lazy'><figcaption>Page 3-D Secure (carte masquée)</figcaption></figure><figure><img src='evidence/2026-09-23/terminal-limit-4-shop-result.png' alt='Plafond du terminal dépassé : terminal-limit-4-shop-result.png' loading='lazy'><figcaption>Page de résultat du site marchand</figcaption></figure></div>
+</section>
+<section class="case warn" id="terminal-limit-high">
+  <h2>Plafond du terminal dépassé (montant élevé) <span class="pill warn">Accepté par SATIM</span></h2>
+  <dl class="meta">
+    <dt>Attendu (checklist SATIM)</dt><dd>Paiement refusé</dd>
+    <dt>Obtenu</dt><dd><strong>Paiement accepté</strong></dd>
+    <dt>Date et heure</dt><dd>2026-09-23 02:24:21 +0200</dd>
+    <dt>Montant</dt><dd>2 376 000,00 DZD</dd>
+    <dt>Carte</dt><dd class="code">****7314, expiration 01/2027</dd>
+    <dt>N° de commande (site)</dt><dd class="code">WQNBBQHS4V</dd>
+    <dt>orderId SATIM</dt><dd class="code">8DjeVORmH8JSXEAADLGN</dd>
+    <dt>Affiché au client</dt><dd>Paiement accepté — Votre paiement a été accepté.</dd>
+  </dl>
+  <p>Même carte avec une commande de 2 376 000,00 DZD : toujours acceptée.</p>
+  <table class='fields'><caption>Réponse de acknowledgeTransaction.do</caption><tr><th>ErrorCode</th><td class='code'>0</td></tr><tr><th>OrderStatus</th><td class='code'>2</td></tr><tr><th>actionCode</th><td class='code'>0</td></tr><tr><th>actionCodeDescription</th><td class='code'>Your payment was accepted . Error code : 0.</td></tr><tr><th>Amount</th><td class='code'>237600000</td></tr><tr><th>depositAmount</th><td class='code'>237600000</td></tr><tr><th>approvalCode</th><td class='code'>510230</td></tr><tr><th>OrderNumber</th><td class='code'>WQNBBQHS4V</td></tr><tr><th>params.respCode</th><td class='code'>00</td></tr><tr><th>params.respCode_desc</th><td class='code'>Votre paiement a été accepté.</td></tr></table>
+  <details><summary>Réponse SATIM complète (nom du porteur, expiration et PAN masqués)</summary><pre>{
+ &quot;expiration&quot;: &quot;[redacted]&quot;,
+ &quot;cardholderName&quot;: &quot;[redacted]&quot;,
+ &quot;depositAmount&quot;: 237600000,
+ &quot;currency&quot;: &quot;012&quot;,
+ &quot;authorizationResponseId&quot;: &quot;510230&quot;,
+ &quot;approvalCode&quot;: &quot;510230&quot;,
+ &quot;actionCode&quot;: 0,
+ &quot;actionCodeDescription&quot;: &quot;Your payment was accepted . Error code : 0.&quot;,
+ &quot;ErrorCode&quot;: &quot;0&quot;,
+ &quot;ErrorMessage&quot;: &quot;Success&quot;,
+ &quot;OrderStatus&quot;: 2,
+ &quot;OrderNumber&quot;: &quot;WQNBBQHS4V&quot;,
+ &quot;Pan&quot;: &quot;[redacted]&quot;,
+ &quot;Amount&quot;: 237600000,
+ &quot;Description&quot;: &quot;Tapis berb&amp;egrave;re 120 &amp;times; 180 cm x99&quot;,
+ &quot;params&quot;: {
+  &quot;respCode_desc&quot;: &quot;Votre paiement a été accepté.&quot;,
+  &quot;udf1&quot;: &quot;WQNBBQHS4V&quot;,
+  &quot;respCode&quot;: &quot;00&quot;
+ },
+ &quot;SvfeResponse&quot;: &quot;00&quot;
+}</pre></details>
+  <div class="shots"><figure><img src='evidence/2026-09-23/terminal-limit-high-1-satim-page.png' alt='Plafond du terminal dépassé (montant élevé) : terminal-limit-high-1-satim-page.png' loading='lazy'><figcaption>Page de paiement SATIM (avant saisie)</figcaption></figure><figure><img src='evidence/2026-09-23/terminal-limit-high-2-3ds-page.png' alt='Plafond du terminal dépassé (montant élevé) : terminal-limit-high-2-3ds-page.png' loading='lazy'><figcaption>Page 3-D Secure (carte masquée)</figcaption></figure><figure><img src='evidence/2026-09-23/terminal-limit-high-4-shop-result.png' alt='Plafond du terminal dépassé (montant élevé) : terminal-limit-high-4-shop-result.png' loading='lazy'><figcaption>Page de résultat du site marchand</figcaption></figure></div>
+</section>
+<section class="case warn" id="expired">
+  <h2>Carte expirée <span class="pill warn">Accepté par SATIM</span></h2>
+  <dl class="meta">
+    <dt>Attendu (checklist SATIM)</dt><dd>Paiement refusé</dd>
+    <dt>Obtenu</dt><dd><strong>Paiement accepté</strong></dd>
+    <dt>Date et heure</dt><dd>2026-09-23 02:24:31 +0200</dd>
+    <dt>Montant</dt><dd>1 200,00 DZD</dd>
+    <dt>Carte</dt><dd class="code">****6615, expiration 12/2022</dd>
+    <dt>N° de commande (site)</dt><dd class="code">WQK63SLGVR</dd>
+    <dt>orderId SATIM</dt><dd class="code">L7NwiqmLGa5F7IAADLGO</dd>
+    <dt>Affiché au client</dt><dd>Paiement accepté — Votre paiement a été accepté.</dd>
+  </dl>
+  <p>La date d&#x27;expiration du portail (12/2022) est sélectionnable sur la page SATIM, et le paiement est accepté.</p>
+  <table class='fields'><caption>Réponse de acknowledgeTransaction.do</caption><tr><th>ErrorCode</th><td class='code'>0</td></tr><tr><th>OrderStatus</th><td class='code'>2</td></tr><tr><th>actionCode</th><td class='code'>0</td></tr><tr><th>actionCodeDescription</th><td class='code'>Your payment was accepted . Error code : 0.</td></tr><tr><th>Amount</th><td class='code'>120000</td></tr><tr><th>depositAmount</th><td class='code'>120000</td></tr><tr><th>approvalCode</th><td class='code'>510250</td></tr><tr><th>OrderNumber</th><td class='code'>WQK63SLGVR</td></tr><tr><th>params.respCode</th><td class='code'>00</td></tr><tr><th>params.respCode_desc</th><td class='code'>Votre paiement a été accepté.</td></tr></table>
+  <details><summary>Réponse SATIM complète (nom du porteur, expiration et PAN masqués)</summary><pre>{
+ &quot;expiration&quot;: &quot;[redacted]&quot;,
+ &quot;cardholderName&quot;: &quot;[redacted]&quot;,
+ &quot;depositAmount&quot;: 120000,
+ &quot;currency&quot;: &quot;012&quot;,
+ &quot;authorizationResponseId&quot;: &quot;510250&quot;,
+ &quot;approvalCode&quot;: &quot;510250&quot;,
+ &quot;actionCode&quot;: 0,
+ &quot;actionCodeDescription&quot;: &quot;Your payment was accepted . Error code : 0.&quot;,
+ &quot;ErrorCode&quot;: &quot;0&quot;,
+ &quot;ErrorMessage&quot;: &quot;Success&quot;,
+ &quot;OrderStatus&quot;: 2,
+ &quot;OrderNumber&quot;: &quot;WQK63SLGVR&quot;,
+ &quot;Pan&quot;: &quot;[redacted]&quot;,
+ &quot;Amount&quot;: 120000,
+ &quot;Description&quot;: &quot;Dattes Deglet Nour 1 kg x1&quot;,
+ &quot;params&quot;: {
+  &quot;respCode_desc&quot;: &quot;Votre paiement a été accepté.&quot;,
+  &quot;udf1&quot;: &quot;WQK63SLGVR&quot;,
+  &quot;respCode&quot;: &quot;00&quot;
+ },
+ &quot;SvfeResponse&quot;: &quot;00&quot;
+}</pre></details>
+  <div class="shots"><figure><img src='evidence/2026-09-23/expired-1-satim-page.png' alt='Carte expirée : expired-1-satim-page.png' loading='lazy'><figcaption>Page de paiement SATIM (avant saisie)</figcaption></figure><figure><img src='evidence/2026-09-23/expired-2-3ds-page.png' alt='Carte expirée : expired-2-3ds-page.png' loading='lazy'><figcaption>Page 3-D Secure (carte masquée)</figcaption></figure><figure><img src='evidence/2026-09-23/expired-4-shop-result.png' alt='Carte expirée : expired-4-shop-result.png' loading='lazy'><figcaption>Page de résultat du site marchand</figcaption></figure></div>
+</section>
+<section class="case pass" id="nonexistent">
+  <h2>Carte inexistante (numéro valide au contrôle de Luhn) <span class="pill pass">Conforme</span></h2>
+  <dl class="meta">
+    <dt>Attendu (checklist SATIM)</dt><dd>Paiement refusé</dd>
+    <dt>Obtenu</dt><dd><strong>Paiement refusé (2003)</strong></dd>
+    <dt>Date et heure</dt><dd>2026-09-23 02:24:41 +0200</dd>
+    <dt>Montant</dt><dd>1 200,00 DZD</dd>
+    <dt>Carte</dt><dd class="code">****3925, expiration 01/2025</dd>
+    <dt>N° de commande (site)</dt><dd class="code">W946X4FQ7R</dd>
+    <dt>orderId SATIM</dt><dd class="code">QfBoWAoIpuqfU4AADLGP</dd>
+    <dt>Affiché au client</dt><dd>Paiement refusé — Card blocked for E-payments. Contact your bank Error code :2003.</dd>
+  </dl>
+  <p>Le numéro publié ne passant pas le contrôle de Luhn, nous avons corrigé uniquement le chiffre de contrôle (même début de numéro, même date, même CVV2). SATIM refuse le paiement : « Card blocked for E-payments… Error code 2003 ».</p>
+  <table class='fields'><caption>Réponse de acknowledgeTransaction.do</caption><tr><th>ErrorCode</th><td class='code'>2</td></tr><tr><th>OrderStatus</th><td class='code'>6</td></tr><tr><th>actionCode</th><td class='code'>2003</td></tr><tr><th>actionCodeDescription</th><td class='code'>Card blocked for E-payments. Contact your bank Error code :2003.</td></tr><tr><th>Amount</th><td class='code'>120000</td></tr><tr><th>depositAmount</th><td class='code'>0</td></tr><tr><th>OrderNumber</th><td class='code'>W946X4FQ7R</td></tr></table>
+  <details><summary>Réponse SATIM complète (nom du porteur, expiration et PAN masqués)</summary><pre>{
+ &quot;expiration&quot;: &quot;[redacted]&quot;,
+ &quot;cardholderName&quot;: &quot;[redacted]&quot;,
+ &quot;depositAmount&quot;: 0,
+ &quot;currency&quot;: &quot;012&quot;,
+ &quot;actionCode&quot;: 2003,
+ &quot;actionCodeDescription&quot;: &quot;Card blocked for E-payments. Contact your bank Error code :2003.&quot;,
+ &quot;ErrorCode&quot;: &quot;2&quot;,
+ &quot;ErrorMessage&quot;: &quot;Payment is declined&quot;,
+ &quot;OrderStatus&quot;: 6,
+ &quot;OrderNumber&quot;: &quot;W946X4FQ7R&quot;,
+ &quot;Pan&quot;: &quot;[redacted]&quot;,
+ &quot;Amount&quot;: 120000,
+ &quot;Description&quot;: &quot;Dattes Deglet Nour 1 kg x1&quot;
+}</pre></details>
+  <div class="shots"><figure><img src='evidence/2026-09-23/nonexistent-1-satim-page.png' alt='Carte inexistante (numéro valide au contrôle de Luhn) : nonexistent-1-satim-page.png' loading='lazy'><figcaption>Page de paiement SATIM (avant saisie)</figcaption></figure><figure><img src='evidence/2026-09-23/nonexistent-4-shop-result.png' alt='Carte inexistante (numéro valide au contrôle de Luhn) : nonexistent-4-shop-result.png' loading='lazy'><figcaption>Page de résultat du site marchand</figcaption></figure></div>
+</section>
+<section class="case na" id="nonexistent-as-published">
+  <h2>Carte inexistante (numéro publié sur le portail) <span class="pill na">Numéro publié invalide</span></h2>
+  <dl class="meta">
+    <dt>Attendu (checklist SATIM)</dt><dd>Paiement refusé</dd>
+    <dt>Obtenu</dt><dd><strong>Carte non soumissible</strong></dd>
+    <dt>Date et heure</dt><dd>2026-09-23 02:24:50 +0200</dd>
+    <dt>Montant</dt><dd>1 200,00 DZD</dd>
+    <dt>Carte</dt><dd class="code">****3927, expiration 01/2025</dd>
+    <dt>N° de commande (site)</dt><dd class="code">—</dd>
+    <dt>orderId SATIM</dt><dd class="code">—</dd>
+    <dt>Affiché au client</dt><dd>Paiement button stays disabled; the card cannot be submitted</dd>
+  </dl>
+  <p>Avec le numéro exactement tel que publié sur le portail, la page SATIM garde le bouton « Paiement » désactivé : le numéro échoue au contrôle de Luhn côté navigateur. Aucune commande n&#x27;est payée.</p>
+  
+  
+  <div class="shots"><figure><img src='evidence/2026-09-23/nonexistent-as-published-1-satim-page.png' alt='Carte inexistante (numéro publié sur le portail) : nonexistent-as-published-1-satim-page.png' loading='lazy'><figcaption>Page de paiement SATIM (avant saisie)</figcaption></figure><figure><img src='evidence/2026-09-23/nonexistent-as-published-2-pay-button-disabled.png' alt='Carte inexistante (numéro publié sur le portail) : nonexistent-as-published-2-pay-button-disabled.png' loading='lazy'><figcaption>Bouton « Paiement » désactivé (numéro masqué)</figcaption></figure></div>
+</section>
+<section class="case pass" id="wrong-password">
+  <h2>Mot de passe erroné (carte valide) <span class="pill pass">Conforme, voir note</span></h2>
+  <dl class="meta">
+    <dt>Attendu (checklist SATIM)</dt><dd>Paiement refusé</dd>
+    <dt>Obtenu</dt><dd><strong>Paiement refusé (-2006)</strong></dd>
+    <dt>Date et heure</dt><dd>2026-09-23 02:24:59 +0200</dd>
+    <dt>Montant</dt><dd>1 200,00 DZD</dd>
+    <dt>Carte</dt><dd class="code">****7215, expiration 01/2027</dd>
+    <dt>N° de commande (site)</dt><dd class="code">WB8982NHPX</dd>
+    <dt>orderId SATIM</dt><dd class="code">2e1q36R5neLM4MAADLGR</dd>
+    <dt>Affiché au client</dt><dd>Paiement refusé — TDS_AUTH_FAILED</dd>
+  </dl>
+  <p>Après un mauvais mot de passe 3-D Secure, SATIM réaffiche la page de mot de passe sans message d&#x27;erreur. Le client quitte (« Annuler ») : SATIM renvoie ErrorCode 2, OrderStatus 6, actionCode -2006 « TDS_AUTH_FAILED ». Le site affiche « Paiement refusé ». Le blocage après 3 essais est couvert par la carte dédiée (refus 2003, testé le 22 septembre).</p>
+  <table class='fields'><caption>Réponse de acknowledgeTransaction.do</caption><tr><th>ErrorCode</th><td class='code'>2</td></tr><tr><th>OrderStatus</th><td class='code'>6</td></tr><tr><th>actionCode</th><td class='code'>-2006</td></tr><tr><th>actionCodeDescription</th><td class='code'>TDS_AUTH_FAILED</td></tr><tr><th>Amount</th><td class='code'>120000</td></tr><tr><th>depositAmount</th><td class='code'>0</td></tr><tr><th>OrderNumber</th><td class='code'>WB8982NHPX</td></tr></table>
+  <details><summary>Réponse SATIM complète (nom du porteur, expiration et PAN masqués)</summary><pre>{
+ &quot;expiration&quot;: &quot;[redacted]&quot;,
+ &quot;cardholderName&quot;: &quot;[redacted]&quot;,
+ &quot;depositAmount&quot;: 0,
+ &quot;currency&quot;: &quot;012&quot;,
+ &quot;actionCode&quot;: -2006,
+ &quot;actionCodeDescription&quot;: &quot;TDS_AUTH_FAILED&quot;,
+ &quot;ErrorCode&quot;: &quot;2&quot;,
+ &quot;ErrorMessage&quot;: &quot;Payment is declined&quot;,
+ &quot;OrderStatus&quot;: 6,
+ &quot;OrderNumber&quot;: &quot;WB8982NHPX&quot;,
+ &quot;Pan&quot;: &quot;[redacted]&quot;,
+ &quot;Amount&quot;: 120000,
+ &quot;Description&quot;: &quot;Dattes Deglet Nour 1 kg x1&quot;
+}</pre></details>
+  <div class="shots"><figure><img src='evidence/2026-09-23/wrong-password-1-satim-page.png' alt='Mot de passe erroné (carte valide) : wrong-password-1-satim-page.png' loading='lazy'><figcaption>Page de paiement SATIM (avant saisie)</figcaption></figure><figure><img src='evidence/2026-09-23/wrong-password-2-3ds-page.png' alt='Mot de passe erroné (carte valide) : wrong-password-2-3ds-page.png' loading='lazy'><figcaption>Page 3-D Secure (carte masquée)</figcaption></figure><figure><img src='evidence/2026-09-23/wrong-password-3-after-wrong-password.png' alt='Mot de passe erroné (carte valide) : wrong-password-3-after-wrong-password.png' loading='lazy'><figcaption>Après un mot de passe erroné</figcaption></figure><figure><img src='evidence/2026-09-23/wrong-password-4-shop-result.png' alt='Mot de passe erroné (carte valide) : wrong-password-4-shop-result.png' loading='lazy'><figcaption>Page de résultat du site marchand</figcaption></figure></div>
+</section>
+<section class="case pass" id="cancel">
+  <h2>Annulation par le client sur la page SATIM <span class="pill pass">Conforme, voir note</span></h2>
+  <dl class="meta">
+    <dt>Attendu (checklist SATIM)</dt><dd>Transaction annulée</dd>
+    <dt>Obtenu</dt><dd><strong>Transaction non payée (342034)</strong></dd>
+    <dt>Date et heure</dt><dd>2026-09-23 02:25:15 +0200</dd>
+    <dt>Montant</dt><dd>1 200,00 DZD</dd>
+    <dt>Carte</dt><dd class="code">****7215, expiration 01/2027</dd>
+    <dt>N° de commande (site)</dt><dd class="code">WZZQWTW3B4</dd>
+    <dt>orderId SATIM</dt><dd class="code">sKMGxUl0CyVq4MAADLGS</dd>
+    <dt>Affiché au client</dt><dd>Paiement refusé — Operation cancelled by user</dd>
+  </dl>
+  <p>Le client clique « Annuler » sur la page SATIM. SATIM le redirige vers l&#x27;adresse d&#x27;échec et renvoie ErrorCode 2, OrderStatus 6, actionCode 342034 « Operation cancelled by user ». La commande n&#x27;est pas payée ni livrée.</p>
+  <table class='fields'><caption>Réponse de acknowledgeTransaction.do</caption><tr><th>ErrorCode</th><td class='code'>2</td></tr><tr><th>OrderStatus</th><td class='code'>6</td></tr><tr><th>actionCode</th><td class='code'>342034</td></tr><tr><th>actionCodeDescription</th><td class='code'>Operation cancelled by user</td></tr><tr><th>Amount</th><td class='code'>120000</td></tr><tr><th>depositAmount</th><td class='code'>0</td></tr><tr><th>OrderNumber</th><td class='code'>WZZQWTW3B4</td></tr></table>
+  <details><summary>Réponse SATIM complète (nom du porteur, expiration et PAN masqués)</summary><pre>{
+ &quot;depositAmount&quot;: 0,
+ &quot;currency&quot;: &quot;012&quot;,
+ &quot;actionCode&quot;: 342034,
+ &quot;actionCodeDescription&quot;: &quot;Operation cancelled by user&quot;,
+ &quot;ErrorCode&quot;: &quot;2&quot;,
+ &quot;ErrorMessage&quot;: &quot;Payment is declined&quot;,
+ &quot;OrderStatus&quot;: 6,
+ &quot;OrderNumber&quot;: &quot;WZZQWTW3B4&quot;,
+ &quot;Pan&quot;: &quot;[redacted]&quot;,
+ &quot;Amount&quot;: 120000,
+ &quot;Description&quot;: &quot;Dattes Deglet Nour 1 kg x1&quot;
+}</pre></details>
+  <div class="shots"><figure><img src='evidence/2026-09-23/cancel-1-satim-page.png' alt='Annulation par le client sur la page SATIM : cancel-1-satim-page.png' loading='lazy'><figcaption>Page de paiement SATIM (avant saisie)</figcaption></figure><figure><img src='evidence/2026-09-23/cancel-4-shop-result.png' alt='Annulation par le client sur la page SATIM : cancel-4-shop-result.png' loading='lazy'><figcaption>Page de résultat du site marchand</figcaption></figure></div>
+</section>
+
+<section>
+  <h2>Questions pour SATIM</h2>
+  <ol class="asks">
+    <li>Les cartes « dépassement du plafond de la carte » et « dépassement du plafond du terminal » sont acceptées à 1 200,00 et à 2 376 000,00 DZD. Quel montant ou réglage doit produire le refus ?</li>
+    <li>La « carte expirée » (12/2022) est acceptée. Cette carte est-elle toujours valable pour ce scénario ?</li>
+    <li>Le numéro de la « carte inexistante » publié sur le portail ne passe pas le contrôle de Luhn. Pouvez-vous confirmer le numéro ? Avec le chiffre de contrôle corrigé, le paiement est refusé (2003) comme attendu.</li>
+    <li>Après un mot de passe 3-D Secure erroné, la page ne montre aucun message d'erreur. Est-ce le comportement attendu ?</li>
+    <li>Les refus 2003, -2006 et l'annulation 342034 n'ont qu'un texte anglais. Un texte traduit est-il disponible ?</li>
+  </ol>
+</section>
+<footer><p class="code" style="color:var(--muted)">Données brutes : docs/evidence/2026-09-23/results.json</p></footer>
+</main></body></html>
