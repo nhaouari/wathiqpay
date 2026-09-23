@@ -7,7 +7,7 @@ import { once } from "node:events";
 import { setTimeout as sleep } from "node:timers/promises";
 import * as fx from "../fixtures/synthetic/index.js";
 
-export type HostedOutcome = "paid" | "declined" | "reversed" | "approved-one-phase" | "abandon";
+export type HostedOutcome = "paid" | "declined" | "reversed" | "approved-one-phase" | "abandon" | "cancel";
 
 export interface RecordedRequest {
   path: string;
@@ -27,7 +27,7 @@ export interface SimulatorOptions {
 
 export class Simulator {
   readonly requests: RecordedRequest[] = [];
-  readonly orders = new Map<string, { orderNumber: string; amount: string; status: number; refunded: bigint; returnUrl: string; failUrl: string; respCode: string; description: string }>();
+  readonly orders = new Map<string, { orderNumber: string; amount: string; status: number; refunded: bigint; returnUrl: string; failUrl: string; respCode: string; description: string; actionCode?: number }>();
   private server: Server | undefined;
   private counter = 0;
   baseUrl = "";
@@ -78,6 +78,13 @@ export class Simulator {
       case "approved-one-phase":
         o.status = 1;
         return `${o.returnUrl}${sep(o.returnUrl)}orderId=${orderId}`;
+      case "cancel":
+        // Live-observed: customer clicks "Annuler" on SATIM's page.
+        o.status = 6;
+        o.respCode = "";
+        o.description = "Operation cancelled by user";
+        o.actionCode = 342034;
+        return `${o.failUrl}${sep(o.failUrl)}orderId=${orderId}`;
       case "abandon":
         return undefined;
     }
@@ -196,6 +203,7 @@ button{display:block;width:100%;margin:.4rem 0;padding:.7rem;font:inherit;border
     if (o.status === 1) return { ...fx.ackApprovedOnePhase, ...base };
     if (o.status === 3) return { ...fx.ackReversed, ...base };
     if (o.status === 6 || o.status === -1) {
+      if (o.actionCode !== undefined) return { ...base, ErrorCode: "2", ErrorMessage: "Payment is declined", actionCode: o.actionCode, actionCodeDescription: o.description, params: {} };
       return { ...fx.ackDeclined, ...base, actionCodeDescription: o.description, params: { respCode: o.respCode, respCode_desc: o.description } };
     }
     return { ...base, actionCode: -100, actionCodeDescription: "", params: {} };

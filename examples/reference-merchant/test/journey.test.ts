@@ -278,6 +278,17 @@ describe("reference merchant journey against the simulator", () => {
     }
   });
 
+  test("a customer who cancels on SATIM's page sees a translated cancellation, with SATIM's text kept", async () => {
+    const b = new Browser();
+    const hosted = await checkout(b);
+    const { ref } = refFromHosted(hosted);
+    const result = await b.go(`${hosted.url}/decide`, { method: "POST", form: { outcome: "cancel" } });
+    assert.match(result.body, /Paiement annulé/);
+    assert.match(result.body, /Aucun montant n&#39;a été débité/);
+    assert.match(result.body, /Message de SATIM : <span lang="en">Operation cancelled by user<\/span>/);
+    assert.equal(await app.store.fulfilmentCount(ref), 0);
+  });
+
   test("undocumented status 1 is held as unknown, not fulfilled", async () => {
     const b = new Browser();
     const hosted = await checkout(b);

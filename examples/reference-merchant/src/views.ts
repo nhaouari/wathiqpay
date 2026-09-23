@@ -277,11 +277,19 @@ export function receiptPage(ctx: Ctx, data: ReceiptData, items: OrderItem[]): st
   return layout(ctx, t.receipt, `<div class="result"><h1>${esc(t.receipt)}</h1><p class="status">${esc(t.shopTitle)}</p>${receiptBlock(ctx.lang, data, items)}<p class="support">${esc(t.support)}</p><p class="no-print"><button class="quiet" onclick="print()">${esc(t.print)}</button></p></div>`);
 }
 
+/** SATIM action codes that arrive with English-only text (live-observed, 22–23 September 2026). */
+const KNOWN_ACTION_CODES: Record<string, "cancelled" | "authFailed" | "blocked"> = {
+  "342034": "cancelled", // Operation cancelled by user
+  "-2006": "authFailed", // TDS_AUTH_FAILED (3-D Secure password not validated)
+  "2003": "blocked", // Card blocked for E-payments
+};
+
 export function failurePage(ctx: Ctx, order: OrderRow, ack: AcknowledgeResult | undefined, kind: "declined" | "reversed" | "refunded" | "partially_refunded" | "pending" | "review" | "failed"): string {
   const t = messages[ctx.lang];
   let title = t.failureTitle;
   let text: string;
   let cls = "ko";
+  let satimNote: string | undefined;
   switch (kind) {
     case "refunded":
     case "partially_refunded":
@@ -305,13 +313,28 @@ export function failurePage(ctx: Ctx, order: OrderRow, ack: AcknowledgeResult | 
     case "failed":
       text = t.registrationFailed;
       break;
-    default:
-      text = ack?.respCodeDescription || ack?.actionCodeDescription || t.reversedText;
+    default: {
+      // Checklist: show respCode_desc, otherwise actionCodeDescription. SATIM only
+      // sends English text for a few codes (live-observed), so for those we add a
+      // translated explanation and keep SATIM's own text underneath.
+      const satimText = ack?.respCodeDescription || ack?.actionCodeDescription;
+      const known = !ack?.respCodeDescription ? KNOWN_ACTION_CODES[String(ack?.actionCode ?? "")] : undefined;
+      if (known) {
+        if (known === "cancelled") {
+          title = t.cancelledTitle;
+          cls = "hold";
+        }
+        text = t[`${known}Text` as "cancelledText" | "authFailedText" | "blockedText"];
+        satimNote = satimText;
+      } else {
+        text = satimText || t.reversedText;
+      }
+    }
   }
   return layout(
     ctx,
     title,
-    `<div class="result"><h1 class="${cls}">${esc(title)}</h1><p class="status">${esc(text)}</p>
+    `<div class="result"><h1 class="${cls}">${esc(title)}</h1><p class="status">${esc(text)}</p>${satimNote ? `<p class="note">${esc(t.satimMessage)} : <span lang="en">${esc(satimNote)}</span></p>` : ""}
 <div class="receipt"><dl><dt>${esc(t.orderNumber)}</dt><dd>${esc(order.orderNumber)}</dd>${order.satimOrderId ? `<dt>${esc(t.transactionId)}</dt><dd>${esc(order.satimOrderId)}</dd>` : ""}<div class="big"><dt>${esc(t.amount)}</dt><dd class="money">${esc(formatAmount(order.amountMinor, ctx.lang))}</dd></div></dl></div>
 <p class="support">${esc(t.support)}</p><div class="actions"><a class="btn" href="/cart">${esc(t.cart)}</a><a class="btn quiet" href="/">${esc(t.backToShop)}</a></div></div>`,
   );
