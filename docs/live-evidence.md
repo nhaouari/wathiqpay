@@ -14,6 +14,14 @@ Sanitized record of every exchange with the real SATIM certification environment
 | 2026-09-22 | 652b156 | Acknowledge an unknown `mdOrder` | `public/acknowledgeTransaction.do` | HTTP 401, `application/json`, body `"Transaction is not found"` (a JSON string) | Documented: `ErrorCode 6` in a JSON object | Divergence; SDK updated to raise `GatewayError http_401` |
 | 2026-09-22 | 652b156 | Open the returned `formUrl` in a browser | hosted page | HTTP 200, title "Paiement", CIB and Algérie Poste branding, merchant name "WATHIQ PAY", amount 50.00 DZD, card form, session timer starting at 10 minutes, help link and 3020 | Hosted page renders | Pass |
 
+## E-mail receipt and custom domain, 23 September 2026
+
+| Check on https://demo.wathiqpay.com | Result |
+|---|---|
+| SATIM returns the customer to demo.wathiqpay.com after payment | Pass |
+| E-mail form shown after payment | Pass |
+| Receipt for order WEDFSKPTM2 sent from recus@wathiqpay.com through Resend, with PDF | Delivered (Resend status) |
+
 ## Deployment `6472e50`, 22 September 2026
 
 | Check on https://wathiqpay-demo2.vercel.app | Result |

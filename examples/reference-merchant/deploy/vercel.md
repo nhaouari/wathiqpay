@@ -32,7 +32,7 @@ The schema is created automatically on the first request.
 | `MERCHANT_CAPTCHA_SECRET` | `openssl rand -hex 32` |
 | `CRON_SECRET` | same value as `MERCHANT_ADMIN_TOKEN` (Vercel sends it on cron calls) |
 | `SATIM_USERNAME`, `SATIM_PASSWORD`, `SATIM_TERMINAL_ID` | certification credentials |
-| `SMTP_URL`, `SMTP_FROM` | optional, not set for now; without them the e-mail receipt form is hidden and print/PDF receipts remain |
+| `SMTP_URL`, `SMTP_FROM` | required by SATIM's checklist (e-mail receipt). With Resend: `smtps://resend:<API key>@smtp.resend.com:465` and `Maison Wathiq <recus@wathiqpay.com>` after verifying the domain in Resend. Without them the e-mail form is hidden |
 
 4. Deploy. Then **Settings → Domains** on the demo project: add `demo.wathiqpay.com`. Because the domain's DNS is already on Vercel, the record is created for you.
 

@@ -65,7 +65,7 @@ This checklist mirrors the accessible SATIM certification portal and adds backen
 - [x] Displays SATIM support number `3020`.
 - [x] Allows the receipt to be printed.
 - [x] Allows the receipt to be downloaded as PDF. *(French, English, and Arabic; verified on the deployment)*
-- [ ] Allows the PDF receipt to be sent to an email address chosen by the customer. *Deferred by owner decision (not required for now). Implemented; hidden until `SMTP_URL` is configured.*
+- [x] Allows the PDF receipt to be sent to an email address chosen by the customer. *(Resend SMTP from recus@wathiqpay.com; delivered with PDF on 23 September 2026, order WEDFSKPTM2)*
 
 ## 6. Rejected/error result page
 
