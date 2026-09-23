@@ -107,6 +107,29 @@ export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer;
     return { order: (await store.get(order.orderNumber))!, ack };
   }
 
+  /**
+   * Re-read a completed order from SATIM, so a refund or cancellation done in
+   * SATIM's own interface shows up on the merchant site. Acknowledgement is
+   * idempotent (live-verified), and this never undoes a fulfilment.
+   */
+  async function refreshFromSatim(order: OrderRow): Promise<OrderRow> {
+    if (!order.satimOrderId || !["paid", "partially_refunded"].includes(order.state)) return order;
+    let ack: AcknowledgeResult;
+    try {
+      ack = await client.acknowledgeTransaction({ orderId: order.satimOrderId, language: order.language });
+    } catch (e) {
+      console.error(`[merchant] status refresh failed order=${order.orderNumber} ${isWathiqPayError(e) ? `${e.name}: ${e.message}` : String(e)}`);
+      return order;
+    }
+    const state = classifyPayment(ack);
+    if ((state === "refunded" || state === "partially_refunded" || state === "reversed") && state !== order.state) {
+      await store.recordAcknowledgement(order.orderNumber, state, JSON.stringify(ack), `updated from SATIM: ${state}`);
+      console.error(`[merchant] order ${order.orderNumber} is now ${state} on SATIM`);
+      return (await store.get(order.orderNumber))!;
+    }
+    return order;
+  }
+
   async function renderOutcome(ctx: Ctx, order: OrderRow, ack: AcknowledgeResult | undefined, owner: boolean): Promise<string> {
     switch (order.state) {
       case "paid":
@@ -277,8 +300,9 @@ export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer;
 
     m = /^\/orders\/([A-Z0-9]{1,10})$/.exec(path);
     if (m && method === "GET") {
-      const order = await store.get(m[1]!);
-      if (!order || order.sessionId !== session) return html(404, notFoundPage(await ctx()));
+      const found = await store.get(m[1]!);
+      if (!found || found.sessionId !== session) return html(404, notFoundPage(await ctx()));
+      const order = await refreshFromSatim(found);
       const ack = order.ackJson ? (JSON.parse(order.ackJson) as AcknowledgeResult) : undefined;
       return html(200, orderDetailPage(await ctx(), order, await store.items(order.orderNumber), ack));
     }

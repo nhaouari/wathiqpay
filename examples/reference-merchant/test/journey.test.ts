@@ -262,6 +262,22 @@ describe("reference merchant journey against the simulator", () => {
     }
   });
 
+  test("a refund or cancellation made on SATIM's side appears on the order page", async () => {
+    for (const [status, refunded, label] of [[4, "all", "Remboursée"], [4, "part", "Partiellement remboursée"], [3, "none", "Annulée"]] as const) {
+      const b = new Browser();
+      const hosted = await checkout(b);
+      const { orderId, ref } = refFromHosted(hosted);
+      await b.go(`${hosted.url}/decide`, { method: "POST", form: { outcome: "paid" } });
+      assert.equal(await app.store.fulfilmentCount(ref), 1);
+      const o = sim.orders.get(orderId)!;
+      o.status = status;
+      o.refunded = refunded === "all" ? BigInt(o.amount) : refunded === "part" ? 100n : 0n;
+      const page = await b.go(`${origin}/orders/${ref}`);
+      assert.match(page.body, new RegExp(label));
+      assert.equal(await app.store.fulfilmentCount(ref), 1, "fulfilment is never undone or repeated");
+    }
+  });
+
   test("undocumented status 1 is held as unknown, not fulfilled", async () => {
     const b = new Browser();
     const hosted = await checkout(b);
