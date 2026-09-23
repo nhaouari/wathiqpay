@@ -23,6 +23,7 @@ ol.asks{padding-left:1.3rem;display:grid;gap:.6rem;max-width:70ch}
 <header class="intro">
   <h1>WathiqPay : preuves des cas à revoir avec SATIM</h1>
   <p>Tests exécutés le 23 septembre 2026 sur le site de démonstration <span class="code">https://demo.wathiqpay.com</span>, environnement de certification SATIM (API <span class="code">test2.satim.dz</span>). Chaque cas est un achat réel sur le site : panier, paiement, page SATIM, retour, confirmation par le serveur (<span class="code">acknowledgeTransaction.do</span>).</p>
+  <p><strong>Cartes vérifiées :</strong> les 15 cartes utilisées (numéro, date d'expiration, CVV2, mot de passe) ont été comparées une à une avec le tableau du portail CIBWEBLab le 23 septembre 2026 : toutes sont identiques. Le numéro de la « carte inexistante » ne passe pas le contrôle de Luhn tel qu'il est publié sur le portail.</p>
   <p>Les numéros de carte, codes CVV2 et mots de passe ne figurent pas dans ce document. Les captures sont prises avant la saisie de la carte ou sur des pages où SATIM masque le numéro.</p>
 </header>
 
@@ -341,7 +342,8 @@ ol.asks{padding-left:1.3rem;display:grid;gap:.6rem;max-width:70ch}
  &quot;Amount&quot;: 120000,
  &quot;Description&quot;: &quot;Dattes Deglet Nour 1 kg x1&quot;
 }</pre></details>
-  <div class="shots"><figure><img src='evidence/2026-09-23/cancel-1-satim-page.png' alt='Annulation par le client sur la page SATIM : cancel-1-satim-page.png' loading='lazy'><figcaption>Page de paiement SATIM (avant saisie)</figcaption></figure><figure><img src='evidence/2026-09-23/cancel-4-shop-result.png' alt='Annulation par le client sur la page SATIM : cancel-4-shop-result.png' loading='lazy'><figcaption>Page de résultat du site marchand</figcaption></figure></div>
+  <p><strong>Correction appliquée le 23 septembre 2026 :</strong> la page de résultat affiche désormais « Paiement annulé » avec un message en français, et conserve le texte de SATIM en dessous (dernière capture).</p>
+  <div class="shots"><figure><img src='evidence/2026-09-23/cancel-5-shop-result-translated.png' alt='Annulation, page de résultat traduite' loading='lazy'><figcaption>Page de résultat après correction (commit 066232f)</figcaption></figure><figure><img src='evidence/2026-09-23/cancel-1-satim-page.png' alt='Annulation par le client sur la page SATIM : cancel-1-satim-page.png' loading='lazy'><figcaption>Page de paiement SATIM (avant saisie)</figcaption></figure><figure><img src='evidence/2026-09-23/cancel-4-shop-result.png' alt='Annulation par le client sur la page SATIM : cancel-4-shop-result.png' loading='lazy'><figcaption>Page de résultat du site marchand</figcaption></figure></div>
 </section>
 
 <section>
