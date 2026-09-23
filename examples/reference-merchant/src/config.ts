@@ -17,6 +17,9 @@ export interface MerchantConfig {
   dbAuthToken: string | undefined;
   outboxDir: string;
   captchaSecret: string;
+  /** Google reCAPTCHA v2 (checkbox). When both are set, checkout uses it instead of the arithmetic check. */
+  recaptchaSiteKey?: string | undefined;
+  recaptchaSecretKey?: string | undefined;
   satim: { username: string; password: string; terminalId: string; baseUrl: string | undefined };
   /** Orders still "registered" after this many seconds are reconciled by the closed-browser job. */
   reconcileAfterSeconds: number;
@@ -65,6 +68,8 @@ export function configFromEnv(env: NodeJS.ProcessEnv = process.env): MerchantCon
     dbAuthToken: env["MERCHANT_DB_AUTH_TOKEN"] || env["TURSO_AUTH_TOKEN"] || undefined,
     outboxDir: env["MERCHANT_OUTBOX"] ?? "examples/reference-merchant/outbox",
     captchaSecret: env["MERCHANT_CAPTCHA_SECRET"] ?? "dev-only-change-me",
+    recaptchaSiteKey: env["RECAPTCHA_SITE_KEY"] || undefined,
+    recaptchaSecretKey: env["RECAPTCHA_SECRET_KEY"] || undefined,
     satim,
     reconcileAfterSeconds: Number(env["MERCHANT_RECONCILE_AFTER"] ?? 600),
   };

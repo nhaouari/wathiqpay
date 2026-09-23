@@ -35,3 +35,27 @@ export function verify(secret: string, token: string | undefined, answer: string
 function sign(secret: string, payload: string): string {
   return createHmac("sha256", secret).update(payload).digest("hex");
 }
+
+// ---------------------------------------------------------------------------
+// Google reCAPTCHA v2 (checkbox), verified server-side.
+
+export type RecaptchaVerifier = (token: string, remoteIp: string | undefined) => Promise<{ success: boolean; hostname?: string; errors?: string[] }>;
+
+export function createRecaptchaVerifier(secretKey: string, fetchImpl: typeof fetch = fetch): RecaptchaVerifier {
+  return async (token, remoteIp) => {
+    const body = new URLSearchParams({ secret: secretKey, response: token });
+    if (remoteIp) body.set("remoteip", remoteIp);
+    try {
+      const res = await fetchImpl("https://www.google.com/recaptcha/api/siteverify", {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body,
+        signal: AbortSignal.timeout(10_000),
+      });
+      const data = (await res.json()) as { success?: boolean; hostname?: string; "error-codes"?: string[] };
+      return { success: data.success === true, ...(data.hostname ? { hostname: data.hostname } : {}), ...(data["error-codes"] ? { errors: data["error-codes"] } : {}) };
+    } catch (e) {
+      return { success: false, errors: [e instanceof Error ? e.message : String(e)] };
+    }
+  };
+}

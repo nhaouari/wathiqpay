@@ -60,7 +60,7 @@ td.num,th.num{text-align:end;white-space:nowrap}tfoot th,tfoot td{border-bottom:
 .total{margin:1rem 0 0;padding-top:1rem;border-top:1px solid rgba(34,30,25,.2);display:flex;justify-content:space-between;align-items:baseline;gap:1rem}.total .money{font-size:2rem}
 .terms{border:1px solid var(--rule);border-radius:6px;padding:1rem 1.2rem;margin:1.4rem 0;background:#fff}.terms h2{font-size:1.05rem;font-family:var(--sans);font-weight:600}.terms p{font-size:.93rem;color:var(--ink-2)}
 .check{display:flex;gap:.6rem;align-items:flex-start;font-size:.95rem}.check input{margin-top:.3rem}
-.captcha{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;margin:1rem 0 1.4rem}.captcha input{width:4.5rem;text-align:center}
+.captcha{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;margin:1rem 0 1.4rem}.captcha.recaptcha{min-height:78px}.captcha input{width:4.5rem;text-align:center}
 .alert{border-radius:4px;padding:.7rem .9rem;margin:0 0 1.2rem;font-size:.95rem;border:1px solid}.alert.bad{background:#FBECEC;border-color:#E9BABA;color:var(--ko)}.alert.good{background:#EAF3EC;border-color:#BFD9C6;color:var(--ok)}
 small,.note{color:var(--ink-2);font-size:.85rem}
 /* result + receipt */
@@ -181,7 +181,9 @@ export interface CustomerInput {
   email?: string;
 }
 
-export function checkoutPage(ctx: Ctx, cart: { lines: PricedLine[]; totalMinor: string }, captcha: { question: string; token: string }, opts: { error?: string; customer?: CustomerInput } = {}): string {
+export type CaptchaWidget = { kind: "math"; question: string; token: string } | { kind: "recaptcha"; siteKey: string };
+
+export function checkoutPage(ctx: Ctx, cart: { lines: PricedLine[]; totalMinor: string }, captcha: CaptchaWidget | { question: string; token: string }, opts: { error?: string; customer?: CustomerInput } = {}): string {
   const t = messages[ctx.lang];
   const amount = formatAmount(cart.totalMinor, ctx.lang);
   const summaryRows = cart.lines.map((l) => `<tr><td>${esc(l.product.name[ctx.lang])} × ${l.quantity}</td><td class="num money">${esc(formatAmount(l.lineMinor, ctx.lang))}</td></tr>`).join("");
@@ -197,7 +199,9 @@ export function checkoutPage(ctx: Ctx, cart: { lines: PricedLine[]; totalMinor: 
   <label class="field"><span>${esc(t.address)}</span><input type="text" name="address" value="${esc(opts.customer?.address ?? "")}" autocomplete="street-address" maxlength="200"></label>
   ${ctx.emailEnabled !== false ? `<label class="field"><span>${esc(t.customerEmail)}</span><input type="email" name="email" value="${esc(opts.customer?.email ?? "")}" autocomplete="email"></label>` : ""}
   <div class="terms"><h2>${esc(t.terms)}</h2><p>${esc(t.termsText)}</p><label class="check"><input type="checkbox" name="terms" value="yes" required><span>${esc(t.acceptTerms)}</span></label></div>
-  <div class="captcha"><label for="captcha">${esc(t.captcha)} <strong>${esc(captcha.question)}</strong> ?</label><input id="captcha" type="text" name="captcha" required inputmode="numeric" autocomplete="off"><input type="hidden" name="captchaToken" value="${esc(captcha.token)}"></div>
+  ${"kind" in captcha && captcha.kind === "recaptcha"
+    ? `<div class="captcha recaptcha"><div class="g-recaptcha" data-sitekey="${esc(captcha.siteKey)}"></div></div><script src="https://www.google.com/recaptcha/api.js?hl=${ctx.lang.toLowerCase()}" async defer></script>`
+    : `<div class="captcha"><label for="captcha">${esc(t.captcha)} <strong>${esc((captcha as { question: string }).question)}</strong> ?</label><input id="captcha" type="text" name="captcha" required inputmode="numeric" autocomplete="off"><input type="hidden" name="captchaToken" value="${esc((captcha as { token: string }).token)}"></div>`}
   ${isDemo(ctx) ? `<p class="demo-reminder">${esc(demoCopy[ctx.lang].text)}</p>` : ""}
   <button class="pay" type="submit"><span>${esc(isDemo(ctx) ? demoCopy[ctx.lang].pay : t.payAmount)} <span class="money">${esc(amount)}</span></span>${cardMark}</button>
 </form>

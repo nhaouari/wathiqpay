@@ -16,7 +16,7 @@ Certification mode reads `SATIM_USERNAME`, `SATIM_PASSWORD`, and `SATIM_TERMINAL
 | Requirement (docs/certification-checklist.md) | Where |
 |---|---|
 | Final amount complete and prominent; consistent through result page and receipt | `views.ts` checkout `.total`, success page, receipt rows use the acknowledged amount |
-| CAPTCHA on the page with the payment button | `captcha.ts`, HMAC-signed arithmetic challenge verified in `POST /checkout` before any SATIM call |
+| CAPTCHA on the page with the payment button | Google reCAPTCHA v2 checkbox verified server-side with Google (`RECAPTCHA_SITE_KEY`, `RECAPTCHA_SECRET_KEY`), or an HMAC-signed arithmetic challenge when no keys are set; checked in `POST /checkout` before any SATIM call |
 | CIB/Edahabia logo on the payment button | Unmodified banner from SATIM's public hosted payment page; provenance and remaining qualifier approval in `public/images/PAYMENT-ARTWORK.md` |
 | Terms of sale and online-payment terms shown and explicitly accepted | `.terms` block with required checkbox; server rejects without it |
 | Language consistent across checkout, SATIM request, result, receipts, errors | Cookie-selected FR/AR/EN; stored on the order; sent to `register.do` and `acknowledgeTransaction.do`; result page uses the order's language |

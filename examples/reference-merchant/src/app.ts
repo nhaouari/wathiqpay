@@ -15,7 +15,7 @@ import type { MerchantConfig } from "./config.js";
 import { OrderStore, type OrderRow, type OrderState } from "./store.js";
 import { messages, normalizeLang, formatAmount, type Lang } from "./i18n.js";
 import { findProduct } from "./catalog.js";
-import { createChallenge, verify } from "./captcha.js";
+import { createChallenge, verify, createRecaptchaVerifier, type RecaptchaVerifier } from "./captcha.js";
 import { buildReceiptPdf } from "./receipt-pdf.js";
 import { createOutboxMailer, createUnconfiguredMailer, isPlausibleEmail, type Mailer } from "./mailer.js";
 import { createSmtpMailer, parseSmtpUrl } from "./smtp.js";
@@ -44,7 +44,7 @@ const PUBLIC_DIR = [
   join(process.cwd(), "examples", "reference-merchant", "public"), // bundled serverless function
 ].find((d) => existsSync(d)) ?? join(HERE, "..", "public");
 
-export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer; store?: OrderStore } = {}): Promise<MerchantApp> {
+export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer; store?: OrderStore; recaptcha?: RecaptchaVerifier } = {}): Promise<MerchantApp> {
   const store = deps.store ?? (await OrderStore.open({ url: config.dbUrl, authToken: config.dbAuthToken }));
   const mailer =
     deps.mailer ??
@@ -54,6 +54,12 @@ export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer;
         ? createUnconfiguredMailer() // read-only filesystem: no outbox possible
         : createOutboxMailer(config.outboxDir));
   const emailEnabled = mailer.enabled !== false;
+  // Google reCAPTCHA when configured; otherwise the built-in arithmetic check.
+  const recaptcha: RecaptchaVerifier | undefined =
+    deps.recaptcha ?? (config.recaptchaSiteKey && config.recaptchaSecretKey ? createRecaptchaVerifier(config.recaptchaSecretKey) : undefined);
+  const captchaWidget = () =>
+    recaptcha && config.recaptchaSiteKey ? ({ kind: "recaptcha", siteKey: config.recaptchaSiteKey } as const) : ({ kind: "math", ...createChallenge(config.captchaSecret) } as const);
+  const expectedHost = new URL(config.publicUrl).hostname;
   const log: string[] = [];
   const client = createClient({
     environment: config.mode,
@@ -221,7 +227,7 @@ export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer;
     if (path === "/checkout" && method === "GET") {
       const cart = priceCart(await store.getCart(session));
       if (cart.lines.length === 0) return redirect("/cart");
-      return html(200, checkoutPage(await ctx(), cart, createChallenge(config.captchaSecret)));
+      return html(200, checkoutPage(await ctx(), cart, captchaWidget()));
     }
 
     if (path === "/checkout" && method === "POST") {
@@ -234,13 +240,22 @@ export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer;
         address: (form.get("address") ?? "").trim().slice(0, 200),
         email: (form.get("email") ?? "").trim(),
       };
-      const rerender = async (error: string) => html(400, checkoutPage(await ctx(), cart, createChallenge(config.captchaSecret), { error, customer }));
+      const rerender = async (error: string) => html(400, checkoutPage(await ctx(), cart, captchaWidget(), { error, customer }));
       if (customer.name.length < 2) return rerender(t.nameRequired);
       const phone = normalizeAlgerianPhone(customer.phone);
       if (!phone) return rerender(t.phoneInvalid);
       if (customer.email && !isPlausibleEmail(customer.email)) return rerender(t.emailInvalid);
       if (form.get("terms") !== "yes") return rerender(t.termsRequired);
-      if (!verify(config.captchaSecret, form.get("captchaToken") ?? undefined, form.get("captcha") ?? undefined)) return rerender(t.captchaFailed);
+      if (recaptcha) {
+        const token = form.get("g-recaptcha-response") ?? "";
+        const ip = (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim() ?? req.socket.remoteAddress ?? undefined;
+        const check = token ? await recaptcha(token, ip) : { success: false as const, errors: ["missing-input-response"] };
+        // The token must also have been issued for this shop's own hostname.
+        if (!check.success || (check.hostname && check.hostname !== expectedHost && expectedHost !== "127.0.0.1" && expectedHost !== "localhost")) {
+          if (check.errors?.length) console.error(`[merchant] recaptcha rejected: ${check.errors.join(",")}`);
+          return rerender(t.captchaFailed);
+        }
+      } else if (!verify(config.captchaSecret, form.get("captchaToken") ?? undefined, form.get("captcha") ?? undefined)) return rerender(t.captchaFailed);
       const email = customer.email;
 
       // 1. Persist first. 2. Register. 3. Store orderId. 4. Redirect to formUrl only.

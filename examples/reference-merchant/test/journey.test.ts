@@ -415,6 +415,42 @@ describe("long PDF receipts", () => {
   });
 });
 
+describe("Google reCAPTCHA", () => {
+  test("renders the widget and gates payment on Google's server-side verification", async () => {
+    const sim = new Simulator();
+    const baseUrl = await sim.start();
+    const seen: string[] = [];
+    const cfg: MerchantConfig = { mode: "simulator", port: 0, host: "127.0.0.1", adminToken: undefined, smtpUrl: undefined, smtpFrom: "x@example.com", publicUrl: "http://127.0.0.1:0", dbUrl: ":memory:", dbAuthToken: undefined, outboxDir: "/dev/null", captchaSecret: "test", recaptchaSiteKey: "site-key-123", recaptchaSecretKey: "secret", satim: { username: "user", password: "secret", terminalId: "E0000000000", baseUrl }, reconcileAfterSeconds: 0 };
+    const app = await createApp(cfg, {
+      store: await OrderStore.open({ url: ":memory:" }),
+      mailer: { async send() { return { id: "x" }; } },
+      recaptcha: async (token) => { seen.push(token); return token === "good" ? { success: true, hostname: "127.0.0.1" } : { success: false, errors: ["invalid-input-response"] }; },
+    });
+    const o = await app.start(0);
+    cfg.publicUrl = o;
+    try {
+      const b = new Browser();
+      await b.go(`${o}/lang/AR?next=/`);
+      await b.go(`${o}/cart/add`, { method: "POST", form: { product: "dates", quantity: "1" } });
+      const page = await b.go(`${o}/checkout`);
+      assert.match(page.body, /class="g-recaptcha" data-sitekey="site-key-123"/);
+      assert.match(page.body, /recaptcha\/api\.js\?hl=ar/, "widget language follows the shop language");
+      assert.doesNotMatch(page.body, /name="captchaToken"/, "no arithmetic check when reCAPTCHA is on");
+      const base = { name: "Test", phone: "0661223344", terms: "yes" };
+      const before = sim.requests.length;
+      assert.equal((await b.go(`${o}/checkout`, { method: "POST", form: base })).status, 400, "missing token is refused");
+      assert.equal((await b.go(`${o}/checkout`, { method: "POST", form: { ...base, "g-recaptcha-response": "bad" } })).status, 400, "rejected token is refused");
+      assert.equal(sim.requests.length, before, "no SATIM call without a valid CAPTCHA");
+      const ok = await b.go(`${o}/checkout`, { method: "POST", form: { ...base, "g-recaptcha-response": "good" } });
+      assert.match(ok.url, /\/hosted\/SIM/, "a valid token proceeds to SATIM");
+      assert.deepEqual(seen, ["bad", "good"]);
+    } finally {
+      await app.stop();
+      await sim.stop();
+    }
+  });
+});
+
 describe("receipt e-mail disabled", () => {
   test("without a mail transport the e-mail form is hidden and the endpoint is off", async () => {
     const { createUnconfiguredMailer } = await import("../src/mailer.js");
