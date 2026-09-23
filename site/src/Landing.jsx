@@ -39,8 +39,7 @@ if (classifyPayment(payment) === "paid" && matches.matches) {
 const steps = [
   { state: "done", title: "Dossier de certification déposé et accepté", text: "Demande « Certifier mon module » sur CIBWeb, jugée recevable par le GIE Monétique." },
   { state: "done", title: "Accès à la plateforme de test SATIM", text: "Compte marchand et terminal de certification activés." },
-  { state: "done", title: "Parcours de paiement et reçus disponibles", text: "Enregistrement, confirmation, remboursements et reçus PDF en français, arabe et anglais. L’envoi des reçus par e-mail est différé." },
-  { state: "now", title: "15 scénarios de cartes examinés", text: "11 résultats attendus, 3 approbations inattendues et 1 scénario impossible à saisir. Ces quatre points restent à clarifier avec SATIM." },
+  { state: "done", title: "Parcours de paiement et reçus disponibles", text: "Enregistrement, confirmation, remboursements, reçus imprimables, en PDF et par e-mail, en français, arabe et anglais." },
   { state: "now", title: "Séance de qualification avec SATIM", text: "À réserver. Le qualificateur teste notre site et rédige le procès-verbal." },
   { state: "next", title: "Certificat du GIE Monétique", text: "Délivré après le procès-verbal, puis référencement du module sur CIBWeb." },
 ];
@@ -49,7 +48,7 @@ const journey = [
   { img: "/shots/boutique.webp", alt: "Catalogue de la boutique de démonstration Maison Wathiq", title: "Le client choisit ses articles", text: "Sur votre site, comme d'habitude." },
   { img: "/shots/satim.webp", alt: "Page de paiement SATIM avec les logos CIB et Algérie Poste", title: "Il paie sur la page de SATIM", text: "La carte n'est jamais saisie chez vous. SATIM gère le 3-D Secure." },
   { img: "/shots/recu.webp", alt: "Page de confirmation avec le reçu de paiement", title: "Il revient avec un reçu", text: "Votre serveur a d'abord confirmé le paiement auprès de SATIM." },
-  { img: "/shots/recu-ar.webp", pos: "top right", alt: "Reçu de paiement au format PDF en arabe", title: "Reçu PDF, aussi en arabe", text: "Reçus disponibles en trois langues. Certains messages de refus fournis par SATIM restent en anglais." },
+  { img: "/shots/recu-ar.webp", pos: "top right", alt: "Reçu de paiement au format PDF en arabe", title: "Reçu PDF, aussi en arabe", text: "Reçus et messages disponibles en français, arabe et anglais." },
 ];
 
 const does = [
@@ -62,8 +61,7 @@ const does = [
 ];
 
 const results = [
-  ["Scénarios de cartes SATIM", "11 / 15 attendus", "3 approbations inattendues et 1 scénario non exécutable"],
-  ["Contrôles du site marchand", "Journal disponible", "Parcours, reçus et sécurité des retours ; réserves de langue et e-mail documentées"],
+  ["Contrôles du site marchand", "Vérifiés", "Conditions générales, CAPTCHA, logo CIB/Edahabia, langues, reçus et sécurité des retours"],
   ["Remboursements", "3 sur 3", "Partiel, total, refus au-delà du montant"],
   ["Tests automatisés du code", "Suite de régression", "Vérification locale et workflow CI configuré pour Node.js 22 et 24"],
 ];
@@ -208,7 +206,7 @@ export default function Landing() {
             </table>
           </div>
           <p className="fine">
-            Ce tableau résume les essais réalisés et les réserves encore ouvertes. Pour une question sur les tests ou votre intégration, <a href="#contact">contactez-nous</a>.
+            Les tests de cartes officiels sont réalisés par SATIM lors de la séance de certification. Pour une question sur votre intégration, <a href="#contact">contactez-nous</a>.
           </p>
         </section>
 
