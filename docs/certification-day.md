@@ -1,5 +1,17 @@
 # Certification-day handoff
 
+**Outcome, 24 September 2026:** the remote certification session with SATIM (qualifier Brahim CHEIKH BEKOUR) passed. The PV states all 18 card scenarios "Test réussi", all page requirements "Respectée", no reserves, and declares demo.wathiqpay.com "Certifié et conforme aux prérequis de fonctionnement pour le paiement en ligne avec cartes CIB/EDAHABIA". One correction round preceded it (see [satim-corrections-2026-09-24.md](satim-corrections-2026-09-24.md)). The CIBWeb dashboard shows step 3 "Tests d'intégration" complete and step 4 "Certification" pending: GIE Monétique issues the certificate from the PV.
+
+## Obligations from the PV (production phase)
+
+- Fix any anomaly promptly; otherwise SATIM may deactivate the service until it is fixed.
+- Inform SATIM of any change of domain name.
+- Inform SATIM of any change of the hosting IP address. *The demo runs on Vercel, whose egress IP addresses are shared and can change; confirm with SATIM how they want this handled before production.*
+- The production date is set by GIE Monétique with SATIM, the merchant and the bank.
+
+## Historical preparation notes
+
+
 Status: not yet ready for an unconditional pass. Local tests are not SATIM certification, and local fixes must be deployed and retested before being presented as live evidence.
 
 ## Before the session

@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 
 const DEMO = "https://demo.wathiqpay.com";
-const UPDATED = "23 septembre 2026";
+const UPDATED = "24 septembre 2026";
 
 const code = `import {
   createClient, classifyPayment, paymentMatchesOrder
@@ -40,8 +40,8 @@ const steps = [
   { state: "done", title: "Dossier de certification déposé et accepté", text: "Demande « Certifier mon module » sur CIBWeb, jugée recevable par le GIE Monétique." },
   { state: "done", title: "Accès à la plateforme de test SATIM", text: "Compte marchand et terminal de certification activés." },
   { state: "done", title: "Parcours de paiement et reçus disponibles", text: "Enregistrement, confirmation, remboursements, reçus imprimables, en PDF et par e-mail, en français, arabe et anglais." },
-  { state: "now", title: "Séance de qualification avec SATIM", text: "À réserver. Le qualificateur teste notre site et rédige le procès-verbal." },
-  { state: "next", title: "Certificat du GIE Monétique", text: "Délivré après le procès-verbal, puis référencement du module sur CIBWeb." },
+  { state: "done", title: "Tests d'intégration SATIM réussis", text: "Séance de certification du 24 septembre 2026 : tous les scénarios réussis et toutes les exigences respectées, sans réserve. Procès-verbal de SATIM établi." },
+  { state: "now", title: "Certificat du GIE Monétique", text: "Le procès-verbal est transmis au GIE Monétique, qui délivre le certificat puis référence le module sur CIBWeb." },
 ];
 
 const journey = [
@@ -108,7 +108,7 @@ export default function Landing() {
       <main id="contenu" tabIndex={-1}>
         <section className="hero wrap">
           <div className="hero-text">
-            <p className="status-chip"><span className="dot" /> Certification SATIM en cours · mis à jour le {UPDATED}</p>
+            <p className="status-chip"><span className="dot" /> Tests SATIM réussis · certificat GIE Monétique en cours · mis à jour le {UPDATED}</p>
             <h1>Acceptez CIB et Edahabia. Gardez la main sur votre intégration.</h1>
             <p className="lede">
               Ne repartez pas de zéro pour intégrer le paiement. WathiqPay réunit les échanges avec SATIM,

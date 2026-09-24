@@ -40,7 +40,9 @@ node build/test/live/cli.js ack <SATIM_ORDER_ID>     # confirm OrderStatus 4 and
 
 If the refund call times out, the SDK reports `outcome: indeterminate`. Acknowledge the order to see whether `depositAmount` dropped **before** trying again; SATIM has no documented idempotency key for refunds.
 
-**Cancellation.** There is no cancellation API. A customer cancels on the SATIM page ("Annuler"), which lands on the failure route with "Operation cancelled by user". After capture, use a refund.
+**Cancellation and refunds in SATIM's back-office (EPG).** In the merchant interface, open **Orders**, click the order number, then **Reverse** (full or partial cancellation) or **Refund** (enter the amount). A reversal can be attempted only once, and only within a time limit set by the bank; if it fails, refund instead. The shop's order page shows the new status the next time it is opened.
+
+**Cancellation through the API.** There is no cancellation API for this merchant user (`reverse.do` answers "Access denied"). A customer cancels on the SATIM page ("Annuler"), which lands on the failure route with "Operation cancelled by user". After capture, use a refund.
 
 ## Incidents
 

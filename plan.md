@@ -1,6 +1,6 @@
 # WathiqPay open-source SDK plan
 
-Date: 22 September 2026 (revision 6). Status: Milestones A–D implemented offline; Milestone E started with live registration and acknowledgement passing (52 tests: unit, contract, tarball consumer, merchant journey; CI workflow). Reference merchant in `examples/reference-merchant/`. First live attempt made; see [live-evidence.md](docs/live-evidence.md). Certification and production readiness remain separate gates.
+Date: 24 September 2026 (revision 7). Status: SATIM integration tests passed on 24 September 2026 (PV, no reserves) for demo.wathiqpay.com; awaiting the GIE Monétique module certificate and CIBWeb referencing (Milestone F). SDK and reference merchant in production-ready shape for certification scope; see [live-evidence.md](docs/live-evidence.md).
 
 ## Recommendation
 
@@ -182,7 +182,7 @@ Exit: live results support each advertised capability; unresolved scenarios rema
 ### Milestone F — Certify and release
 
 - [ ] Continue the existing accepted CIBWeb developer application; verify the final submitted artifact matches the scope agreed earlier. Do not create a duplicate application.
-- [ ] Complete the module qualification tests; retain the PV and track its transmission to GIE Monétique.
+- [x] Complete the module qualification tests; retain the PV and track its transmission to GIE Monétique. *PV of 24 September 2026: all 18 scenarios passed, all page requirements met, no reserves; domain demo.wathiqpay.com declared certified and compliant. PV kept privately (not in this public repository); transmission to GIE Monétique to track.*
 - [ ] Obtain the module certificate from GIE Monétique and verify its directory referencing.
 - [ ] Record the certified module/release identity and clarify changes that require recertification.
 - [ ] Define the developer process for validating merchant licence-authentication requests, including free/open-source distributions as agreed with GIE Monétique.

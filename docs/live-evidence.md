@@ -2,6 +2,10 @@
 
 Sanitized record of every exchange with the real SATIM certification environment. No credentials, terminal identifiers, or customer data are recorded here.
 
+## Certification session, 24 September 2026
+
+SATIM's remote certification session on demo.wathiqpay.com passed. PV: all 18 scenarios "Test réussi" (the three cards that approved in our own runs and the unenterable card were accepted as passed by the qualifier), every page requirement "Respectée", no reserves or remarks. SATIM declares the domain certified and compliant for CIB/EDAHABIA online payment. The PV itself is kept privately, outside this public repository.
+
 | Date | SDK commit/version | Scenario | Request | Observed response | Expected | Result |
 |---|---|---|---|---|---|---|
 | 2026-09-17 | 0.1.0-alpha.0 (uncommitted) | Register 50.00 DZD, language FR, POST form-encoded, `test2.satim.dz` | `register.do` | HTTP 200, `{"errorCode":5,"errorMessage":"Access denied"}` | `errorCode 0` with `orderId`/`formUrl` | Blocked by account access |
