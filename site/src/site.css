@@ -151,3 +151,17 @@ main > section { padding-block: clamp(3.5rem, 8vw, 6rem); }
   nav { gap: 0.9rem; font-size: 0.9rem; }
   .journey, .does { grid-template-columns: 1fr; }
 }
+
+/* language switch */
+.lang-switch { display: inline-flex; gap: 0.15rem; border: 1px solid var(--rule); border-radius: 999px; padding: 0.15rem; }
+.lang-switch button { font: inherit; font-size: 0.85rem; font-weight: 600; border: 0; background: none; padding: 0.2rem 0.6rem; border-radius: 999px; cursor: pointer; color: var(--ink); }
+.lang-switch button:hover { color: var(--green); }
+.lang-switch button[aria-pressed="true"] { background: var(--green); color: #fff; }
+
+/* Arabic, right to left */
+html[dir="rtl"] body { font-family: var(--arabic); }
+html[dir="rtl"] h1, html[dir="rtl"] h2, html[dir="rtl"] h3, html[dir="rtl"] .does dt, html[dir="rtl"] .results .num { font-family: var(--arabic); letter-spacing: 0; }
+html[dir="rtl"] h1 { line-height: 1.3; }
+html[dir="rtl"] .lede, html[dir="rtl"] .section-lede { line-height: 1.8; }
+html[dir="rtl"] .brand { font-family: var(--display); }
+html[dir="rtl"] .code-card figcaption, html[dir="rtl"] .updated { font-family: var(--arabic); font-size: 0.9rem; }

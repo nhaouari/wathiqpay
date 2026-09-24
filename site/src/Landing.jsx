@@ -1,78 +1,58 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { content, LANGS } from "./content.js";
 
 const DEMO = "https://demo.wathiqpay.com";
-const UPDATED = "24 septembre 2026";
-
-const code = `import {
-  createClient, classifyPayment, paymentMatchesOrder
-} from "wathiqpay";
-
-const satim = createClient({
-  environment: "certification",
-  username: process.env.SATIM_USERNAME,
-  password: process.env.SATIM_PASSWORD,
-  terminalId: process.env.SATIM_TERMINAL_ID,
-});
-
-// 1. Enregistrer la commande chez SATIM
-const order = await satim.registerOrder({
-  orderNumber: "CMD000123",
-  amount: { value: "806.50", currency: "DZD" },
-  returnUrl: "https://votre-site.dz/paiement/retour",
-  failUrl: "https://votre-site.dz/paiement/echec",
-  language: "fr",
-});
-// → rediriger le client vers order.formUrl
-
-// 2. Au retour, confirmer depuis votre serveur
-const payment =
-  await satim.acknowledgeTransaction(order.orderId);
-
-const matches = paymentMatchesOrder(payment, {
-  orderNumber: "CMD000123",
-  amount: { value: "806.50", currency: "DZD" },
-});
-if (classifyPayment(payment) === "paid" && matches.matches) {
-  // livrer la commande, une seule fois
-}`;
-
-const steps = [
-  { state: "done", title: "Dossier de certification déposé et accepté", text: "Demande « Certifier mon module » sur CIBWeb, jugée recevable par le GIE Monétique." },
-  { state: "done", title: "Accès à la plateforme de test SATIM", text: "Compte marchand et terminal de certification activés." },
-  { state: "done", title: "Parcours de paiement et reçus disponibles", text: "Enregistrement, confirmation, remboursements, reçus imprimables, en PDF et par e-mail, en français, arabe et anglais." },
-  { state: "done", title: "Tests d'intégration SATIM réussis", text: "Séance de certification du 24 septembre 2026 : tous les scénarios réussis et toutes les exigences respectées, sans réserve. Procès-verbal de SATIM établi." },
-  { state: "now", title: "Certificat du GIE Monétique", text: "Le procès-verbal est transmis au GIE Monétique, qui délivre le certificat puis référence le module sur CIBWeb." },
+const SHOTS = [
+  { img: "/shots/boutique.webp" },
+  { img: "/shots/satim.webp" },
+  { img: "/shots/recu.webp" },
+  { img: "/shots/recu-ar.webp", pos: "top right" },
 ];
+const LANG_LABEL = { fr: "FR", ar: "AR", en: "EN" };
+const LANG_NAME = { fr: "Français", ar: "العربية", en: "English" };
 
-const journey = [
-  { img: "/shots/boutique.webp", alt: "Catalogue de la boutique de démonstration Maison Wathiq", title: "Le client choisit ses articles", text: "Sur votre site, comme d'habitude." },
-  { img: "/shots/satim.webp", alt: "Page de paiement SATIM avec les logos CIB et Algérie Poste", title: "Il paie sur la page de SATIM", text: "La carte n'est jamais saisie chez vous. SATIM gère le 3-D Secure." },
-  { img: "/shots/recu.webp", alt: "Page de confirmation avec le reçu de paiement", title: "Il revient avec un reçu", text: "Votre serveur a d'abord confirmé le paiement auprès de SATIM." },
-  { img: "/shots/recu-ar.webp", pos: "top right", alt: "Reçu de paiement au format PDF en arabe", title: "Reçu PDF, aussi en arabe", text: "Reçus et messages disponibles en français, arabe et anglais." },
-];
+/** ?lang= in the URL, then the last choice, then the browser language; French by default. */
+function initialLang() {
+  try {
+    const q = new URLSearchParams(window.location.search).get("lang");
+    if (q && LANGS.includes(q)) return q;
+    const saved = window.localStorage.getItem("lang");
+    if (saved && LANGS.includes(saved)) return saved;
+  } catch {
+    /* storage may be unavailable */
+  }
+  const nav = (navigator.language || "fr").slice(0, 2).toLowerCase();
+  return LANGS.includes(nav) ? nav : "fr";
+}
 
-const does = [
-  ["Montants exacts", "806,50 DA devient 80650 sans arrondi ni virgule flottante."],
-  ["Confirmation côté serveur", "Un paiement n'est accepté que si SATIM renvoie respCode 00, ErrorCode 0 et OrderStatus 2, avec le bon montant et le bon numéro de commande."],
-  ["Protection contre les doublons", "La boutique de référence ne déclenche qu’une seule validation de commande malgré les retours répétés. Votre intégration doit conserver cette protection."],
-  ["Remboursements", "Totaux ou partiels, testés sur la plateforme SATIM."],
-  ["Pas de relance automatique", "Si SATIM ne répond pas, le module ne rejoue pas l'opération : il vous dit que le résultat est incertain."],
-  ["Saisie de carte chez SATIM", "Le numéro complet, le CVV et le mot de passe sont saisis sur la page SATIM. Les réponses peuvent contenir un numéro masqué ; les données sensibles sont filtrées dans les journaux."],
-];
-
-const results = [
-  ["Contrôles du site marchand", "Vérifiés", "Conditions générales, CAPTCHA, logo CIB/Edahabia, langues, reçus et sécurité des retours"],
-  ["Remboursements", "3 sur 3", "Partiel, total, refus au-delà du montant"],
-  ["Tests automatisés du code", "Suite de régression", "Vérification locale et workflow CI configuré pour Node.js 22 et 24"],
-];
-
-function mark(state) {
-  if (state === "done") return <span className="mark done"><span aria-hidden="true">✓</span><span className="sr-only">Fait : </span></span>;
-  if (state === "now") return <span className="mark now"><span className="sr-only">En cours : </span></span>;
-  return <span className="mark next"><span className="sr-only">À venir : </span></span>;
+function Mark({ state, t }) {
+  if (state === "done") return <span className="mark done"><span aria-hidden="true">✓</span><span className="sr-only">{t.marks.done}</span></span>;
+  if (state === "now") return <span className="mark now"><span className="sr-only">{t.marks.now}</span></span>;
+  return <span className="mark next"><span className="sr-only">{t.marks.next}</span></span>;
 }
 
 export default function Landing() {
+  const [lang, setLang] = useState(initialLang);
+  const t = content[lang];
+  const demoUrl = `${DEMO}/lang/${lang.toUpperCase()}?next=/`;
+
+  useEffect(() => {
+    document.documentElement.lang = lang;
+    document.documentElement.dir = t.dir;
+    document.title = t.htmlTitle;
+    const meta = document.querySelector('meta[name="description"]');
+    if (meta) meta.setAttribute("content", t.metaDescription);
+    try {
+      window.localStorage.setItem("lang", lang);
+    } catch {
+      /* ignore */
+    }
+    const url = new URL(window.location.href);
+    if (lang === "fr") url.searchParams.delete("lang");
+    else url.searchParams.set("lang", lang);
+    window.history.replaceState(null, "", url);
+  }, [lang, t]);
+
   useEffect(() => {
     const load = () => {
       if (window.Tally) window.Tally.loadEmbeds();
@@ -90,17 +70,24 @@ export default function Landing() {
 
   return (
     <div className="page">
-      <a className="skip-link" href="#contenu">Aller au contenu principal</a>
+      <a className="skip-link" href="#contenu">{t.skip}</a>
       <header className="top">
         <div className="wrap top-row">
-          <a className="brand" href="/">
+          <a className="brand" href="/" dir="ltr">
             Wathiq<span>Pay</span>
           </a>
-          <nav aria-label="Navigation principale">
-            <a href="#parcours">Démonstration</a>
-            <a href="#avancement">Avancement</a>
-            <a href="#marchands">Pour les marchands</a>
-            <a href="#contact">Contact</a>
+          <nav aria-label={t.nav.label}>
+            <a href="#parcours">{t.nav.demo}</a>
+            <a href="#avancement">{t.nav.progress}</a>
+            <a href="#marchands">{t.nav.merchants}</a>
+            <a href="#contact">{t.nav.contact}</a>
+            <span className="lang-switch" role="group" aria-label={t.nav.lang}>
+              {LANGS.map((l) => (
+                <button key={l} type="button" lang={l} aria-pressed={l === lang} title={LANG_NAME[l]} onClick={() => setLang(l)}>
+                  {LANG_LABEL[l]}
+                </button>
+              ))}
+            </span>
           </nav>
         </div>
       </header>
@@ -108,71 +95,66 @@ export default function Landing() {
       <main id="contenu" tabIndex={-1}>
         <section className="hero wrap">
           <div className="hero-text">
-            <p className="status-chip"><span className="dot" /> Tests SATIM réussis · certificat GIE Monétique en cours · mis à jour le {UPDATED}</p>
-            <h1>Acceptez CIB et Edahabia. Gardez la main sur votre intégration.</h1>
-            <p className="lede">
-              Ne repartez pas de zéro pour intégrer le paiement. WathiqPay réunit les échanges avec SATIM,
-              la vérification des paiements et les remboursements dans un module installé sur votre serveur.
-              Votre équipe se concentre sur votre boutique, pas sur chaque détail du protocole.
-            </p>
-            <p className="ar" lang="ar" dir="rtl">اقبل الدفع ببطاقة CIB والذهبية، واحتفظ بالتحكم في التكامل على خادمك.</p>
-            <p className="fine"><strong>Sans abonnement WathiqPay pour utiliser le module.</strong> Vos frais bancaires et votre hébergement restent distincts. Logiciel propriétaire en version alpha ; certification en cours.</p>
+            <p className="status-chip"><span className="dot" /> {t.statusChip} {t.updated}</p>
+            <h1>{t.h1}</h1>
+            <p className="lede">{t.lede}</p>
+            <p className="fine"><strong>{t.pricingNote[0]}</strong>{t.pricingNote[1]}</p>
             <div className="actions">
-              <a className="btn primary" href={DEMO} target="_blank" rel="noreferrer">Essayer la boutique de démonstration</a>
-              <a className="btn" href="#contact">Discuter de votre intégration</a>
+              <a className="btn primary" href={demoUrl} target="_blank" rel="noreferrer">{t.ctaDemo}</a>
+              <a className="btn" href="#contact">{t.ctaTalk}</a>
             </div>
-            <p className="fine">Démonstration en environnement de certification : aucune livraison réelle. Utilisez uniquement les cartes de test fournies par SATIM, jamais votre carte personnelle.</p>
+            <p className="fine">{t.demoNote}</p>
           </div>
-          <figure className="code-card">
-            <figcaption>Extrait serveur simplifié, pas une intégration complète</figcaption>
-            <pre tabIndex={0} aria-label="Exemple de code Node.js"><code>{code}</code></pre>
+          <figure className="code-card" dir="ltr">
+            <figcaption dir={t.dir}>{t.codeCaption}</figcaption>
+            <pre tabIndex={0} aria-label={t.codeLabel}><code>{t.code}</code></pre>
           </figure>
         </section>
 
         <section className="wrap" aria-labelledby="benefices">
-          <h2 id="benefices">Moins de travail technique. Plus de maîtrise.</h2>
+          <h2 id="benefices">{t.benefitsTitle}</h2>
           <dl className="does">
-            <div><dt>Une base déjà développée et testée</dt><dd>Réutilisez les contrôles de montant, la confirmation côté serveur et la gestion des erreurs. Vous évitez de reconstruire ces mécanismes pour chaque projet.</dd></div>
-            <div><dt>Pas d’abonnement au module</dt><dd>L’utilisation de WathiqPay ne nécessite pas d’abonnement récurrent. Les conditions d’acquisition et les éventuelles prestations sont à préciser dans votre offre ; les frais de votre banque restent applicables.</dd></div>
-            <div><dt>Votre serveur, votre relation bancaire</dt><dd>Le module communique avec SATIM depuis votre infrastructure. Aucun service hébergé par WathiqPay n’est nécessaire au traitement des paiements, et WathiqPay ne collecte pas vos fonds.</dd></div>
+            {t.benefits.map(([title, text]) => (
+              <div key={title}><dt>{title}</dt><dd>{text}</dd></div>
+            ))}
           </dl>
-          <p className="section-lede">Une fois certifié et référencé, le module pourra s’inscrire dans le parcours CIBWeb prévu pour les marchands utilisant un module déjà certifié. Votre dossier, les tests requis et l’activation bancaire restent nécessaires : aucun délai d’acceptation n’est garanti.</p>
-          <p className="band-cta"><a href="#contact">Parlons de votre site et de votre intégration</a></p>
+          <p className="section-lede">{t.benefitsNote}</p>
+          <p className="band-cta"><a href="#contact">{t.benefitsCta}</a></p>
         </section>
 
         <section id="parcours" className="band">
           <div className="wrap">
-            <h2>Ce que vit votre client</h2>
-            <p className="section-lede">Captures réelles de notre boutique de démonstration, prises sur la plateforme de test SATIM.</p>
+            <h2>{t.journeyTitle}</h2>
+            <p className="section-lede">{t.journeyLede}</p>
             <ol className="journey">
-              {journey.map((j) => (
-                <li key={j.img}>
-                  <div className="shot"><img src={j.img} alt={j.alt} loading="lazy" width="1600" height="1000" style={j.pos ? { objectPosition: j.pos } : undefined} /></div>
-                  <h3>{j.title}</h3>
-                  <p>{j.text}</p>
-                </li>
-              ))}
+              {SHOTS.map((s, i) => {
+                const [alt, title, text] = t.journey[i];
+                return (
+                  <li key={s.img}>
+                    <div className="shot"><img src={s.img} alt={alt} loading="lazy" width="1600" height="1000" style={s.pos ? { objectPosition: s.pos } : undefined} /></div>
+                    <h3>{title}</h3>
+                    <p>{text}</p>
+                  </li>
+                );
+              })}
             </ol>
-            <p className="band-cta"><a href={DEMO} target="_blank" rel="noreferrer">Faire le parcours vous-même sur la boutique de démonstration</a></p>
+            <p className="band-cta"><a href={demoUrl} target="_blank" rel="noreferrer">{t.journeyCta}</a></p>
           </div>
         </section>
 
         <section id="avancement" className="wrap two-col">
           <div>
-            <h2>Où nous en sommes</h2>
-            <p className="section-lede">
-              Nous ne sommes pas encore certifiés, et nous préférons le dire clairement. Voici les étapes
-              du processus du GIE Monétique et ce qui est fait.
-            </p>
-            <p className="updated">Mis à jour le {UPDATED}</p>
+            <h2>{t.progressTitle}</h2>
+            <p className="section-lede">{t.progressLede}</p>
+            <p className="updated">{t.updatedLabel} {t.updated}</p>
           </div>
           <ol className="steps">
-            {steps.map((s) => (
-              <li key={s.title} className={s.state}>
-                {mark(s.state)}
+            {t.steps.map(([state, title, text]) => (
+              <li key={title} className={state}>
+                <Mark state={state} t={t} />
                 <div>
-                  <h3>{s.title}</h3>
-                  <p>{s.text}</p>
+                  <h3>{title}</h3>
+                  <p>{text}</p>
                 </div>
               </li>
             ))}
@@ -180,79 +162,63 @@ export default function Landing() {
         </section>
 
         <section className="wrap">
-          <h2>Ce que fait le module</h2>
+          <h2>{t.doesTitle}</h2>
           <dl className="does">
-            {does.map(([t, d]) => (
-              <div key={t}>
-                <dt>{t}</dt>
-                <dd>{d}</dd>
+            {t.does.map(([title, text]) => (
+              <div key={title}>
+                <dt>{title}</dt>
+                <dd>{text}</dd>
               </div>
             ))}
           </dl>
         </section>
 
         <section className="wrap">
-          <h2>Testé, pas seulement promis</h2>
+          <h2>{t.testedTitle}</h2>
           <div className="table-wrap">
             <table className="results">
               <thead>
-                <tr><th scope="col">Essai</th><th scope="col">Résultat</th><th scope="col">Détail</th></tr>
+                <tr>{t.testedHead.map((h) => <th key={h} scope="col">{h}</th>)}</tr>
               </thead>
               <tbody>
-                {results.map(([a, b, c]) => (
+                {t.tested.map(([a, b, c]) => (
                   <tr key={a}><th scope="row">{a}</th><td className="num">{b}</td><td>{c}</td></tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <p className="fine">
-            Les tests de cartes officiels sont réalisés par SATIM lors de la séance de certification. Pour une question sur votre intégration, <a href="#contact">contactez-nous</a>.
-          </p>
+          <p className="fine">{t.testedNote[0]}<a href="#contact">{t.testedNote[1]}</a>{t.testedNote[2]}</p>
         </section>
 
         <section id="marchands" className="band">
           <div className="wrap two-col">
             <div>
-              <h2>Votre boutique. Votre banque. Votre module.</h2>
-              <p className="section-lede">
-                Une intégration directe pour les marchands qui veulent garder leur infrastructure et leur relation bancaire.
-                Vous choisissez un module logiciel, pas un service de collecte de vos ventes.
-              </p>
+              <h2>{t.merchantsTitle}</h2>
+              <p className="section-lede">{t.merchantsLede}</p>
             </div>
             <div className="merchant">
-              <h3>Ce qui reste chez vous</h3>
-              <ul>
-                <li>Votre banque, votre contrat et votre compte : les paiements arrivent directement chez vous.</li>
-                <li>Vos identifiants SATIM et votre terminal.</li>
-                <li>Votre autorisation auprès du GIE Monétique : le module WathiqPay n’est pas encore référencé.</li>
-              </ul>
-              <h3>Ce qu’il vous faut</h3>
-              <ul>
-                <li>Un registre du commerce ou de l’artisanat.</li>
-                <li>L’inscription au fichier national des e-fournisseurs (code e-commerce, CNRC).</li>
-                <li>Une banque domiciliataire membre du GIE Monétique.</li>
-              </ul>
-              <p className="fine">Conditions publiées par le <a href="https://www.cibweb.dz/fr/">GIE Monétique sur CIBWeb</a>. L’éligibilité du marchand et l’activation par sa banque restent distinctes de la certification du module. Pour un statut d’auto-entrepreneur, demandez une confirmation écrite au GIE.</p>
+              <h3>{t.keepTitle}</h3>
+              <ul>{t.keep.map((k) => <li key={k}>{k}</li>)}</ul>
+              <h3>{t.needTitle}</h3>
+              <ul>{t.need.map((k) => <li key={k}>{k}</li>)}</ul>
+              <p className="fine">{t.needNote[0]}<a href="https://www.cibweb.dz/fr/">{t.needNote[1]}</a>{t.needNote[2]}</p>
             </div>
           </div>
         </section>
 
         <section id="contact" className="wrap contact">
           <div>
-            <h2>Préparez votre intégration dès maintenant</h2>
-            <p className="section-lede">
-              Présentez votre site, votre technologie et l’avancement de votre dossier marchand pour discuter de l’intégration et des conditions d’acquisition du module.
-              Ne transmettez ni données de carte, ni mot de passe, ni identifiants SATIM.
-            </p>
+            <h2>{t.contactTitle}</h2>
+            <p className="section-lede">{t.contactLede}</p>
           </div>
           <div className="form-box">
-            <p className="fine">Formulaire hébergé par Tally. Si le formulaire ne s’affiche pas, <a href="https://tally.so/r/3yav5p">ouvrez le formulaire de contact directement</a>. Consultez la <a href="https://tally.so/help/privacy-policy">politique de confidentialité de Tally</a> avant de transmettre vos coordonnées.</p>
+            <p className="fine">{t.formNote[0]}<a href="https://tally.so/r/3yav5p">{t.formNote[1]}</a>{t.formNote[2]}<a href="https://tally.so/help/privacy-policy">{t.formNote[3]}</a>{t.formNote[4]}</p>
             <iframe
               data-tally-src="https://tally.so/embed/3yav5p?alignLeft=1&hideTitle=1&transparentBackground=1&dynamicHeight=1"
               loading="lazy"
               width="100%"
               height="560"
-              title="Formulaire de contact WathiqPay"
+              title={t.formTitle}
             />
           </div>
         </section>
@@ -260,8 +226,8 @@ export default function Landing() {
 
       <footer className="foot">
         <div className="wrap foot-row">
-          <p>WathiqPay · Logiciel propriétaire · <a href="#contact">Contact</a></p>
-          <p>CIB, Edahabia, SATIM et GIE Monétique sont des marques de leurs propriétaires. WathiqPay n’est pas affilié à SATIM.</p>
+          <p>{t.footer[0]}<a href="#contact">{t.footer[1]}</a></p>
+          <p>{t.trademarks}</p>
         </div>
       </footer>
     </div>
