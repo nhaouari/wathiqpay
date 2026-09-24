@@ -1,11 +1,9 @@
 # Payment artwork provenance
 
-`cib-edahabia.jpg` is the unmodified banner served by SATIM's public hosted-payment page:
+`cib-edahabia-logo.png` is the combined CIB / Edahabia (الذهبية, Algérie Poste) payment badge shown on the payment button. It is taken unchanged from the WordPress plugin "Paiement par Carte DAHABIA et Carte CIB for WooCommerce" (version 2.4.1, `assets/images/satimipay_icon.png`, https://wordpress.org/plugins/paiement-par-carte-dahabia-et-cib-for-woocommerce/), whose payment integration for SATIM is in use by certified merchants. Retrieved 24 September 2026.
 
-- Page: https://cib.satim.dz/payment/merchants/SATIM/payment_fr.html
-- Original image: https://cib.satim.dz/payment/merchants/SATIM/images/logo-fr.jpg
-- Retrieved: 2026-09-22.
+It replaces the SATIM welcome banner used previously, after SATIM's qualifier asked on 24 September 2026 for "le bon logo CIB/Edahabia" on the payment button.
 
-The banner includes the CIB and Algérie Poste marks and explicitly names CIB–Edahabia. It is displayed unchanged, with its original aspect ratio, on the reference merchant's payment button. It is served locally, without sending visitor requests to a third-party image server.
+The CIB and Algérie Poste / Edahabia marks belong to their respective owners. Confirm with the qualifier that this badge is acceptable, or replace it with artwork supplied by SATIM.
 
-These trademarks belong to their respective owners. Public availability is not an open-source licence or proof of SATIM's acceptance of this particular merchant-button layout. Confirm the required certification artwork/layout with the qualifier. The banner's embedded text is French; approved Arabic/English variants remain to be obtained if required.
+`cib-edahabia.jpg` (SATIM's hosted-page banner) is no longer used on the payment button.

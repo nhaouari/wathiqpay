@@ -128,12 +128,12 @@ describe("reference merchant journey against the simulator", () => {
     assert.match(page.body, /name="terms"/);
     assert.match(page.body, /name="captcha"/);
     assert.match(page.body, /CIB · Edahabia/);
-    assert.match(page.body, /<button class="pay"[^>]*>[\s\S]*<img src="\/images\/cib-edahabia\.jpg"/);
-    const paymentArtwork = await fetch(`${origin}/images/cib-edahabia.jpg`);
+    assert.match(page.body, /<button class="pay"[^>]*>[\s\S]*<img src="\/images\/cib-edahabia-logo\.png"/);
+    const paymentArtwork = await fetch(`${origin}/images/cib-edahabia-logo.png`);
     assert.equal(paymentArtwork.status, 200);
-    assert.equal(paymentArtwork.headers.get("content-type"), "image/jpeg");
+    assert.equal(paymentArtwork.headers.get("content-type"), "image/png");
     const artworkBytes = Buffer.from(await paymentArtwork.arrayBuffer());
-    assert.equal(artworkBytes.subarray(0, 3).toString("hex"), "ffd8ff");
+    assert.equal(artworkBytes.subarray(1, 4).toString(), "PNG");
     assert.ok(artworkBytes.length > 1000);
     assert.match(page.body, /lang="fr"/);
     const empty = await new Browser().go(`${origin}/checkout`);
@@ -321,6 +321,33 @@ describe("reference merchant journey against the simulator", () => {
     assert.equal(kept.approvalCode, "303030", "receipt data is kept");
     const receipt = await b.go(`${origin}/orders/${ref}/receipt`);
     assert.match(receipt.body, /303030/);
+  });
+
+  test("SATIM qualifier remarks: receipt shows company and status, no 'SATIM' label; refusal hides references", async () => {
+    const b = new Browser();
+    const paid = await checkout(b);
+    const ok = await b.go(`${paid.url}/decide`, { method: "POST", form: { outcome: "paid" } });
+    assert.match(ok.body, /class="receipt-brand">Maison Wathiq/);
+    assert.match(ok.body, /<dt>Statut<\/dt><dd>Paiement accepté<\/dd>/);
+    assert.match(ok.body, /Identifiant de transaction</);
+    assert.doesNotMatch(ok.body, /Identifiant de transaction SATIM/);
+    const { ref } = refFromHosted(paid);
+    const cookie = [...b.cookies].map(([k, v]) => `${k}=${v}`).join("; ");
+    const pdf = Buffer.from(await (await fetch(`${origin}/orders/${ref}/receipt.pdf`, { headers: { cookie } })).arrayBuffer()).toString("latin1");
+    assert.match(pdf, /\(Maison Wathiq \xb7 Re\xe7u de paiement\) Tj/, "PDF names the company");
+    assert.match(pdf, /\(Paiement accept\xe9\) Tj/, "PDF shows the status");
+    assert.doesNotMatch(pdf, /transaction SATIM/);
+    const b2 = new Browser();
+    const refused = await checkout(b2);
+    const { orderId: rid, ref: rref } = refFromHosted(refused);
+    const ko = await b2.go(`${refused.url}/decide`, { method: "POST", form: { outcome: "declined" } });
+    assert.match(ko.body, /Paiement refusé/);
+    const visible = ko.body.replace(/<[^>]*>/g, " ");
+    assert.doesNotMatch(visible, new RegExp(rref), "no order number shown on the refusal page");
+    assert.doesNotMatch(visible, new RegExp(rid), "no transaction id shown on the refusal page");
+    assert.match(ko.body, /3020/);
+    const logo = await fetch(`${origin}/images/cib-edahabia-logo.png`);
+    assert.equal(logo.headers.get("content-type"), "image/png");
   });
 
   test("undocumented status 1 is held as unknown, not fulfilled", async () => {

@@ -19,8 +19,10 @@ test("checkout does not request an email address when delivery is disabled", () 
     const html = checkoutPage({ lang, cartCount: 0, mode: "simulator", emailEnabled: false }, { lines: [], totalMinor: "5000" }, { question: "2 + 3", token: "test" });
     assert.doesNotMatch(html, /name="email"/);
     assert.match(html, /name="terms"/);
-    assert.match(html, /cib-edahabia\.jpg/);
-    assert.match(html, /class="demo-reminder"/);
-    assert.match(html, /Tester le paiement|Test payment|اختبار الدفع/);
+    // SATIM qualifier remarks, 24 September 2026: proper CIB/Edahabia logo, no demo paragraph, no "Tester".
+    assert.match(html, /<button class="pay"[\s\S]*cib-edahabia-logo\.png/);
+    assert.doesNotMatch(html, /class="demo-reminder"/);
+    assert.doesNotMatch(html, /Tester le paiement|Test payment|اختبار الدفع/);
+    assert.match(html, /Payer|Pay|ادفع/);
   }
 });

@@ -49,7 +49,7 @@ button:hover,.btn:hover{background:var(--blue-ink);border-color:var(--blue-ink);
 .quiet{background:transparent;color:var(--blue);border-color:var(--rule)}.quiet:hover{background:var(--sand-2);color:var(--blue-ink);border-color:var(--rule)}
 .link{background:none;border:0;padding:0;color:var(--blue);font-weight:400;text-decoration:underline;text-underline-offset:3px}.link:hover{background:none;color:var(--blue-ink)}
 .pay{width:100%;font-size:1.1rem;padding:.95rem 1.2rem;display:flex;justify-content:space-between;align-items:center;gap:1rem;box-shadow:inset 0 -4px 0 var(--saffron)}
-.pay{flex-direction:column}.cards{display:block;width:100%;max-width:36rem;background:#fff;border-radius:4px;padding:.3rem}.cards img{display:block;width:100%;height:auto}
+.cards{display:block;flex:none;background:#fff;border-radius:6px;padding:2px;line-height:0}.cards img{display:block;width:4.6rem;height:auto}
 /* tables */
 table{border-collapse:collapse;width:100%}th,td{padding:.75rem .2rem;text-align:start;border-bottom:1px solid var(--rule);vertical-align:middle}th{font-weight:500;color:var(--ink-2);font-size:.9rem}
 td.num,th.num{text-align:end;white-space:nowrap}tfoot th,tfoot td{border-bottom:0;padding-top:.6rem}tfoot tr:last-child th,tfoot tr:last-child td{font-size:1.15rem;color:var(--ink);font-weight:500}
@@ -67,6 +67,7 @@ small,.note{color:var(--ink-2);font-size:.85rem}
 /* result + receipt */
 .result{max-width:36rem}.result h1{margin-bottom:.2rem}.result .status{font-size:1.05rem;color:var(--ink-2);margin-bottom:1.6rem}
 .receipt{background:var(--sand);border-radius:6px;padding:1.6rem 1.8rem;position:relative}.receipt:after{content:"";position:absolute;left:0;right:0;bottom:-8px;height:8px;background:radial-gradient(circle at 8px -2px,transparent 8px,var(--sand) 9px) 0 0/16px 16px repeat-x}
+.receipt-brand{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;margin:0 0 1rem;padding-bottom:.7rem;border-bottom:1px solid rgba(34,30,25,.2);font-family:var(--serif);font-size:1.3rem;font-weight:600}.receipt-brand span{font-family:var(--sans);font-size:.85rem;font-weight:500;color:var(--ink-2)}
 .receipt dl{display:grid;grid-template-columns:auto 1fr;gap:.55rem 1.2rem;margin:0}.receipt dt{color:var(--ink-2);font-size:.9rem}.receipt dd{margin:0;font-variant-numeric:tabular-nums}
 .receipt .big{grid-column:1/-1;display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid rgba(34,30,25,.2);padding-top:.8rem;margin-top:.4rem}.receipt .big .money{font-size:2rem}
 .items{margin:1.2rem 0 0;padding:0;list-style:none}.items li{display:flex;justify-content:space-between;gap:1rem;padding:.35rem 0;border-bottom:1px dashed rgba(34,30,25,.2);font-size:.95rem}
@@ -84,7 +85,7 @@ small,.note{color:var(--ink-2);font-size:.85rem}
 
 const fonts = `<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23143B64'/%3E%3Ctext x='16' y='23' text-anchor='middle' fill='white' font-size='22'%3EW%3C/text%3E%3C/svg%3E"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=Noto+Naskh+Arabic:wght@400;500;600&family=Noto+Sans+Arabic:wght@400;500;600&display=swap">`;
 
-const cardMark = `<span class="cards"><img src="/images/cib-edahabia.jpg" width="1143" height="110" alt="CIB · Edahabia"></span>`;
+const cardMark = `<span class="cards"><img src="/images/cib-edahabia-logo.png" width="363" height="232" alt="CIB · Edahabia"></span>`;
 
 export interface Ctx {
   lang: Lang;
@@ -206,8 +207,7 @@ export function checkoutPage(ctx: Ctx, cart: { lines: PricedLine[]; totalMinor: 
   ${"kind" in captcha && captcha.kind === "recaptcha"
     ? `<div class="captcha recaptcha"><div class="g-recaptcha" data-sitekey="${esc(captcha.siteKey)}"></div></div><script src="https://www.google.com/recaptcha/api.js?hl=${ctx.lang.toLowerCase()}" async defer></script>`
     : `<div class="captcha"><label for="captcha">${esc(t.captcha)} <strong>${esc((captcha as { question: string }).question)}</strong> ?</label><input id="captcha" type="text" name="captcha" required inputmode="numeric" autocomplete="off"><input type="hidden" name="captchaToken" value="${esc((captcha as { token: string }).token)}"></div>`}
-  ${isDemo(ctx) ? `<p class="demo-reminder">${esc(demoCopy[ctx.lang].text)}</p>` : ""}
-  <button class="pay" type="submit"><span>${esc(isDemo(ctx) ? demoCopy[ctx.lang].pay : t.payAmount)} <span class="money">${esc(amount)}</span></span>${cardMark}</button>
+  <button class="pay" type="submit"><span>${esc(t.payAmount)} <span class="money">${esc(amount)}</span></span>${cardMark}</button>
 </form>
 <aside class="summary"><h2>${esc(t.orderSummary)}</h2><table><tbody>${summaryRows}</tbody><tfoot><tr><th>${esc(t.shipping)}</th><td class="num">${esc(t.shippingFree)}</td></tr></tfoot></table>
 <div class="total"><span>${esc(t.total)}</span><span class="money" id="total">${esc(amount)}</span></div></aside></div>`,
@@ -245,6 +245,7 @@ export interface ReceiptData {
 export function receiptRows(lang: Lang, { order, ack }: ReceiptData): Array<[string, string]> {
   const t = messages[lang];
   return [
+    [t.status, t.successTitle],
     [t.orderNumber, order.orderNumber],
     [t.transactionId, order.satimOrderId ?? ""],
     [t.approvalCode, ack.approvalCode ?? ""],
@@ -260,7 +261,7 @@ function receiptBlock(lang: Lang, data: ReceiptData, items: OrderItem[]): string
   const amountRow = rows.find(([k]) => k === t.amount)!;
   const dl = rows.filter(([k]) => k !== t.amount).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("");
   const list = items.length ? `<ul class="items">${items.map((it) => `<li><span>${esc(it.name)} × ${it.quantity}</span><span class="money">${esc(formatAmount((BigInt(it.unitMinor) * BigInt(it.quantity)).toString(), lang))}</span></li>`).join("")}</ul>` : "";
-  return `<div class="receipt"><dl>${dl}<div class="big"><dt>${esc(amountRow[0])}</dt><dd class="money">${esc(amountRow[1])}</dd></div></dl>${list}</div>`;
+  return `<div class="receipt"><p class="receipt-brand">${esc(t.shopTitle)}<span>${esc(t.receipt)}</span></p><dl>${dl}<div class="big"><dt>${esc(amountRow[0])}</dt><dd class="money">${esc(amountRow[1])}</dd></div></dl>${list}</div>`;
 }
 
 export function successPage(ctx: Ctx, data: ReceiptData, items: OrderItem[], emailSentTo?: string, emailError?: boolean, owner = true, emailEnabled = true): string {
@@ -343,7 +344,7 @@ export function failurePage(ctx: Ctx, order: OrderRow, ack: AcknowledgeResult | 
     ctx,
     title,
     `<div class="result"><h1 class="${cls}">${esc(title)}</h1><p class="status">${esc(text)}</p>${satimNote ? `<p class="note">${esc(t.satimMessage)} : <span lang="en">${esc(satimNote)}</span></p>` : ""}
-<div class="receipt"><dl><dt>${esc(t.orderNumber)}</dt><dd>${esc(order.orderNumber)}</dd>${order.satimOrderId ? `<dt>${esc(t.transactionId)}</dt><dd>${esc(order.satimOrderId)}</dd>` : ""}<div class="big"><dt>${esc(t.amount)}</dt><dd class="money">${esc(formatAmount(order.amountMinor, ctx.lang))}</dd></div></dl></div>
+<div class="receipt"><dl><div class="big"><dt>${esc(t.amount)}</dt><dd class="money">${esc(formatAmount(order.amountMinor, ctx.lang))}</dd></div></dl></div>
 <p class="support">${esc(t.support)}</p><div class="actions"><a class="btn" href="/cart">${esc(t.cart)}</a><a class="btn quiet" href="/">${esc(t.backToShop)}</a></div></div>`,
   );
 }

@@ -196,11 +196,11 @@ export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer;
     const path = url.pathname;
 
     // Static product images (whitelisted names only; no path traversal).
-    const img = /^\/images\/([a-z0-9-]+\.jpg)$/.exec(path);
+    const img = /^\/images\/([a-z0-9-]+\.(?:jpg|png))$/.exec(path);
     if (img && method === "GET") {
       try {
         const bytes = await readFile(join(PUBLIC_DIR, "images", img[1]!));
-        res.writeHead(200, { "content-type": "image/jpeg", "cache-control": "public, max-age=86400", "content-length": bytes.length });
+        res.writeHead(200, { "content-type": img[1]!.endsWith(".png") ? "image/png" : "image/jpeg", "cache-control": "public, max-age=86400", "content-length": bytes.length });
         res.end(bytes);
       } catch {
         res.writeHead(404, { "content-type": "text/plain" });
@@ -416,7 +416,7 @@ export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer;
     const items = (await store.items(data.order.orderNumber)).map((it) => ({ label: `${it.quantity} ×`, value: `${it.name}  ${formatAmount((BigInt(it.unitMinor) * BigInt(it.quantity)).toString(), lang)}` }));
     return buildReceiptPdf({
       direction: lang === "AR" ? "rtl" : "ltr",
-      title: t.receipt,
+      title: `${t.shopTitle} · ${t.receipt}`,
       lines: [...receiptRows(lang, data).map(([label, value]) => ({ label, value })), ...items],
       footer: [t.support, `${t.total}: ${formatAmount(data.ack.amountMinor ?? data.order.amountMinor, lang)}`],
     });
