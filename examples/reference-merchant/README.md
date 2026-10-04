@@ -11,6 +11,10 @@ MERCHANT_MODE=certification MERCHANT_PUBLIC_URL=https://your-host.example npm ru
 
 Certification mode reads `SATIM_USERNAME`, `SATIM_PASSWORD`, and `SATIM_TERMINAL_ID` from `.env`, requires `MERCHANT_ADMIN_TOKEN`, and needs a public HTTPS origin for the return URLs. See [deploy/README.md](deploy/README.md) for a one-command Docker deployment with automatic TLS, or [deploy/vercel.md](deploy/vercel.md) to host it on Vercel with a Turso database.
 
+## Course store
+
+`MERCHANT_STORE=courses` turns the same application into a real store selling online courses, with automatic enrolment on the course platform after a confirmed payment. See [deploy/store.md](deploy/store.md).
+
 ## How each certification requirement is met
 
 | Requirement (docs/certification-checklist.md) | Where |

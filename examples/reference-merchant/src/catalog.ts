@@ -7,6 +7,11 @@ export interface Product {
   priceMinor: string;
   /** Served from public/images; see public/images/ATTRIBUTION.md for licences. */
   image: string;
+  /** Intrinsic image size; 1200×900 when omitted. */
+  imageSize?: [width: number, height: number];
+  /** Digital goods: the OnlineCourseHost course the buyer is enrolled in once the payment is confirmed. */
+  courseId?: string;
+  features?: Record<Lang, string[]>;
 }
 
 export const PRODUCTS: readonly Product[] = [
@@ -18,10 +23,11 @@ export const PRODUCTS: readonly Product[] = [
   { id: "honey", name: { FR: "Miel de montagne 1 kg", AR: "عسل جبلي 1 كغ", EN: "Mountain honey 1 kg" }, blurb: { FR: "Toutes fleurs, récolté dans le Djurdjura.", AR: "متعدد الأزهار، من جبال جرجرة.", EN: "Wildflower, harvested in the Djurdjura." }, priceMinor: "250000", image: "honey.jpg" },
 ];
 
-export function findProduct(id: string): Product | undefined {
-  return PRODUCTS.find((p) => p.id === id);
+export function findProduct(id: string, products: readonly Product[] = PRODUCTS): Product | undefined {
+  return products.find((p) => p.id === id);
 }
 
 export function productImg(p: Product, lang: Lang, sizes = "(max-width: 52rem) 100vw, 33vw"): string {
-  return `<img src="/images/${p.image}" alt="${p.name[lang].replace(/"/g, "&quot;")}" width="1200" height="900" loading="lazy" decoding="async" sizes="${sizes}">`;
+  const [width, height] = p.imageSize ?? [1200, 900];
+  return `<img src="/images/${p.image}" alt="${p.name[lang].replace(/"/g, "&quot;")}" width="${width}" height="${height}" loading="lazy" decoding="async" sizes="${sizes}">`;
 }

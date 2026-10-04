@@ -40,13 +40,13 @@ export interface LegalPage {
 
 const UPDATED = { FR: "Dernière mise à jour : 23 septembre 2026", EN: "Last updated: 23 September 2026", AR: "آخر تحديث: 23 سبتمبر 2026" };
 
-function contactLine(op: Operator, lang: Lang): string {
+export function contactLine(op: Operator, lang: Lang): string {
   const parts = [op.email, op.phone].filter(Boolean).join(" · ");
   const via = { FR: `le formulaire de contact de ${op.website}`, EN: `the contact form at ${op.website}`, AR: `نموذج الاتصال على ${op.website}` }[lang];
   return parts ? `${parts} (${via})` : via;
 }
 
-function identity(op: Operator, lang: Lang): string {
+export function identity(op: Operator, lang: Lang): string {
   const bits = [op.name, op.address, op.rc ? { FR: `RC ${op.rc}`, EN: `Trade register ${op.rc}`, AR: `السجل التجاري ${op.rc}` }[lang] : undefined].filter(Boolean);
   return bits.join(", ");
 }

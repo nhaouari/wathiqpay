@@ -48,6 +48,18 @@ export interface OrderRow {
   note: string | null;
 }
 
+/** Delivery of one digital item (a course enrolment). */
+export interface Delivery {
+  attempts: number;
+  deliveredAt: string | null;
+  /** True when delivery was deliberately not attempted (test payments). */
+  skipped: boolean;
+  lastError: string | null;
+}
+
+/** Enrolment is retried up to this many times, then left for an operator. */
+export const MAX_DELIVERY_ATTEMPTS = 10;
+
 export interface StoreConfig {
   /** ":memory:", "file:./data/merchant.sqlite", or "libsql://<db>.turso.io". */
   url: string;
@@ -103,6 +115,15 @@ const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS fulfilments (
     order_number TEXT PRIMARY KEY REFERENCES orders(order_number),
     fulfilled_at TEXT NOT NULL
+  )`,
+  `CREATE TABLE IF NOT EXISTS deliveries (
+    order_number TEXT NOT NULL REFERENCES orders(order_number),
+    product_id   TEXT NOT NULL,
+    attempts     INTEGER NOT NULL DEFAULT 0,
+    delivered_at TEXT,
+    skipped      INTEGER NOT NULL DEFAULT 0,
+    last_error   TEXT,
+    PRIMARY KEY (order_number, product_id)
   )`,
   `CREATE INDEX IF NOT EXISTS orders_session ON orders(session_id, created_at)`,
   `CREATE INDEX IF NOT EXISTS orders_state ON orders(state, registered_at)`,
@@ -246,6 +267,39 @@ export class OrderStore {
   async staleRegistered(olderThanSeconds: number): Promise<OrderRow[]> {
     const cutoff = new Date(Date.now() - olderThanSeconds * 1000).toISOString();
     return (await this.many(`SELECT * FROM orders WHERE state IN ('registered', 'unknown') AND registered_at <= ? ORDER BY registered_at LIMIT 200`, [cutoff])).map(toRow);
+  }
+
+  // ---- digital delivery --------------------------------------------------
+
+  async deliveries(orderNumber: string): Promise<Map<string, Delivery>> {
+    const rows = await this.many(`SELECT product_id, attempts, delivered_at, skipped, last_error FROM deliveries WHERE order_number = ?`, [orderNumber]);
+    return new Map(rows.map((r) => [String(r["product_id"]), { attempts: Number(r["attempts"]), deliveredAt: text(r["delivered_at"]), skipped: Number(r["skipped"]) === 1, lastError: text(r["last_error"]) }]));
+  }
+
+  /** Record one attempt. A delivered or skipped item is final and never overwritten. */
+  async recordDelivery(orderNumber: string, productId: string, outcome: "delivered" | "skipped" | { error: string }): Promise<void> {
+    const deliveredAt = outcome === "delivered" ? now() : null;
+    const skipped = outcome === "skipped" ? 1 : 0;
+    const error = typeof outcome === "object" ? outcome.error.slice(0, 500) : null;
+    await this.run(
+      `INSERT INTO deliveries (order_number, product_id, attempts, delivered_at, skipped, last_error) VALUES (?, ?, 1, ?, ?, ?)
+       ON CONFLICT(order_number, product_id) DO UPDATE SET attempts = attempts + 1, delivered_at = excluded.delivered_at, skipped = excluded.skipped, last_error = excluded.last_error
+       WHERE deliveries.delivered_at IS NULL AND deliveries.skipped = 0`,
+      [orderNumber, productId, deliveredAt, skipped, error],
+    );
+  }
+
+  /** Paid orders with an item still to deliver and attempts left. */
+  async ordersAwaitingDelivery(): Promise<OrderRow[]> {
+    return (
+      await this.many(
+        `SELECT DISTINCT o.* FROM orders o JOIN order_items i ON i.order_number = o.order_number
+         LEFT JOIN deliveries d ON d.order_number = i.order_number AND d.product_id = i.product_id
+         WHERE o.state = 'paid' AND (d.order_number IS NULL OR (d.delivered_at IS NULL AND d.skipped = 0 AND d.attempts < ?))
+         ORDER BY o.fulfilled_at LIMIT 50`,
+        [MAX_DELIVERY_ATTEMPTS],
+      )
+    ).map(toRow);
   }
 
   async fulfilmentCount(orderNumber: string): Promise<number> {

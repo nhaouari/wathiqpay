@@ -12,8 +12,12 @@ import { once } from "node:events";
 import { randomBytes } from "node:crypto";
 import { createClient, classifyPayment, paymentMatchesOrder, fromMinorUnits, isWathiqPayError, redact, type AcknowledgeResult, type WathiqPayClient } from "../../../src/index.js";
 import type { MerchantConfig } from "./config.js";
-import { OrderStore, type OrderRow, type OrderState } from "./store.js";
-import { messages, normalizeLang, formatAmount, type Lang } from "./i18n.js";
+import { OrderStore, MAX_DELIVERY_ATTEMPTS, type OrderRow, type OrderState } from "./store.js";
+import { normalizeLang, formatAmount, type Lang } from "./i18n.js";
+import { shopFor } from "./shops.js";
+import { createOchEnroller, type Enroller } from "./och.js";
+import { courseTermsPage, coursePrivacyPage } from "./legal-courses.js";
+import { courseCatalogPage, coursePage, contactPage } from "./views-courses.js";
 import { findProduct } from "./catalog.js";
 import { operatorFromEnv, termsPage, privacyPage } from "./legal.js";
 import { createChallenge, verify, createRecaptchaVerifier, type RecaptchaVerifier } from "./captcha.js";
@@ -21,7 +25,7 @@ import { buildReceiptPdf } from "./receipt-pdf.js";
 import { createOutboxMailer, createUnconfiguredMailer, isPlausibleEmail, type Mailer } from "./mailer.js";
 import { createSmtpMailer, parseSmtpUrl } from "./smtp.js";
 import { timingSafeEqual } from "node:crypto";
-import { catalogPage, legalPage, cartPage, checkoutPage, ordersPage, orderDetailPage, successPage, failurePage, receiptPage, receiptRows, notFoundPage, layout, esc, priceCart, type Ctx } from "./views.js";
+import { catalogPage, legalPage, cartPage, checkoutPage, ordersPage, orderDetailPage, successPage, failurePage, receiptPage, receiptRows, notFoundPage, layout, esc, priceCart, accessText, type Access, type Ctx } from "./views.js";
 
 export interface MerchantApp {
   server: Server;
@@ -55,7 +59,14 @@ function storedAck(ack: AcknowledgeResult): string {
   return JSON.stringify(kept);
 }
 
-export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer; store?: OrderStore; recaptcha?: RecaptchaVerifier } = {}): Promise<MerchantApp> {
+export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer; store?: OrderStore; recaptcha?: RecaptchaVerifier; enroller?: Enroller } = {}): Promise<MerchantApp> {
+  const shop = shopFor(config.store);
+  const messages = shop.messages;
+  const academyUrl = config.academyUrl ?? "https://academy.gpt4ar.com";
+  // SATIM's test cards are public: outside production nobody is enrolled unless explicitly asked.
+  const enroller: Enroller | undefined =
+    shop.digital && (config.mode === "production" || config.enrollInTestMode) ? (deps.enroller ?? (config.och ? createOchEnroller(config.och) : undefined)) : undefined;
+  if (shop.digital && config.mode === "production" && !enroller) throw new Error("the course store needs OCH_INTEGRATION_TOKEN in production");
   const store = deps.store ?? (await OrderStore.open({ url: config.dbUrl, authToken: config.dbAuthToken }));
   const mailer =
     deps.mailer ??
@@ -83,11 +94,87 @@ export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer;
     timeoutMs: 30_000,
   });
 
-  const fulfil = (order: OrderRow) => {
-    // The merchant's real fulfilment (ship, unlock, email) goes here. It runs
-    // at most once per order because fulfilOnce() guards it.
+  const fulfil = async (order: OrderRow) => {
+    // Runs at most once per order because fulfilOnce() guards it. Enrolment
+    // has its own record, so a failed attempt is retried without re-fulfilling.
     log.push(`fulfilled ${order.orderNumber}`);
+    await deliver(order.orderNumber);
   };
+
+  /**
+   * Enrol the buyer in every course of a paid order that is not delivered yet.
+   * Safe to call repeatedly: delivered items are skipped, failures are retried
+   * up to MAX_DELIVERY_ATTEMPTS, and a test payment is recorded as skipped so
+   * it can never be enrolled later.
+   */
+  async function deliver(orderNumber: string): Promise<void> {
+    if (!shop.digital) return;
+    const order = await store.get(orderNumber);
+    if (!order || order.state !== "paid") return;
+    const done = await store.deliveries(orderNumber);
+    let delivered = 0;
+    let outstanding = 0;
+    for (const item of await store.items(orderNumber)) {
+      const courseId = findProduct(item.productId, shop.products)?.courseId;
+      const previous = done.get(item.productId);
+      if (!courseId || previous?.deliveredAt || previous?.skipped) continue;
+      if (!enroller) {
+        await store.recordDelivery(orderNumber, item.productId, "skipped");
+        continue;
+      }
+      if ((previous?.attempts ?? 0) >= MAX_DELIVERY_ATTEMPTS) {
+        outstanding += 1;
+        continue;
+      }
+      try {
+        if (!order.customerEmail) throw new Error("order has no e-mail address");
+        await enroller.enroll({ name: order.customerName, email: order.customerEmail, courseId });
+        await store.recordDelivery(orderNumber, item.productId, "delivered");
+        log.push(`enrolled ${orderNumber} in ${item.productId}`);
+        delivered += 1;
+      } catch (e) {
+        const error = e instanceof Error ? e.message : String(e);
+        await store.recordDelivery(orderNumber, item.productId, { error });
+        log.push(`enrolment failed for ${orderNumber} ${item.productId}`);
+        console.error(`[merchant] enrolment failed order=${orderNumber} course=${item.productId}: ${error}`);
+        outstanding += 1;
+      }
+    }
+    // One confirmation once everything is open, with the receipt attached.
+    if (delivered > 0 && outstanding === 0 && emailEnabled && order.customerEmail && order.ackJson) {
+      const lang = order.language;
+      const t = messages[lang];
+      const data = { order, ack: JSON.parse(order.ackJson) as AcknowledgeResult };
+      const access: Access = { state: "ready", email: order.customerEmail, url: academyUrl };
+      try {
+        await mailer.send({
+          to: order.customerEmail,
+          subject: `${shop.courseText![lang].accessSubject} · ${t.shopTitle}`,
+          text: `${accessText({ lang, cartCount: 0, shop }, access)}\n\n${receiptRows(lang, data).map(([k, v]) => `${k}: ${v}`).join("\n")}\n${t.support}\n`,
+          pdf: await renderPdf(lang, data),
+          pdfName: `receipt-${orderNumber}.pdf`,
+        });
+      } catch (e) {
+        console.error(`[merchant] access e-mail failed order=${orderNumber}: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
+  }
+
+  /** What the buyer is told about their course access; `retry` attempts a pending enrolment first. */
+  async function accessFor(order: OrderRow, retry = false): Promise<Access | undefined> {
+    if (!shop.digital || order.state !== "paid" || !order.customerEmail) return undefined;
+    const courses = (await store.items(order.orderNumber)).filter((it) => findProduct(it.productId, shop.products)?.courseId);
+    if (courses.length === 0) return undefined;
+    const pending = (d: Awaited<ReturnType<OrderStore["deliveries"]>>) => courses.some((it) => !d.get(it.productId)?.deliveredAt && !d.get(it.productId)?.skipped);
+    let done = await store.deliveries(order.orderNumber);
+    if (retry && pending(done)) {
+      await deliver(order.orderNumber);
+      done = await store.deliveries(order.orderNumber);
+    }
+    // A payment that was deliberately not enrolled (test platform) gets no access notice.
+    if (courses.some((it) => done.get(it.productId)?.skipped)) return undefined;
+    return { state: pending(done) ? "pending" : "ready", email: order.customerEmail, url: academyUrl };
+  }
 
   /**
    * Acknowledge with SATIM and settle the local state. Idempotent: an order
@@ -111,7 +198,7 @@ export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer;
     const match = paymentMatchesOrder(ack, { orderNumber: order.orderNumber, amount: fromMinorUnits(order.amountMinor) });
     if (state === "paid") {
       if (match.matches) {
-        if (await store.fulfilOnce(order.orderNumber, ackJson)) fulfil(order);
+        if (await store.fulfilOnce(order.orderNumber, ackJson)) await fulfil(order);
       } else {
         await store.recordAcknowledgement(order.orderNumber, "review", ackJson, `mismatch: ${match.mismatches.join(",")}`);
         console.error(`[merchant] payment mismatch order=${order.orderNumber} fields=${match.mismatches.join(",")}`);
@@ -153,7 +240,7 @@ export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer;
       case "paid":
         // Anyone returning from SATIM sees the payment result; receipt tools
         // (which reveal the customer's e-mail) are for the ordering session only.
-        return successPage(ctx, { order, ack: ack! }, await store.items(order.orderNumber), undefined, false, owner, emailEnabled);
+        return successPage(ctx, { order, ack: ack! }, await store.items(order.orderNumber), undefined, false, owner, emailEnabled, owner ? await accessFor(order) : undefined);
       case "declined":
         return failurePage(ctx, order, ack, "declined");
       case "reversed":
@@ -173,7 +260,7 @@ export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer;
   async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const url = new URL(req.url ?? "/", config.publicUrl);
     const cookies = parseCookies(req.headers.cookie);
-    const lang = normalizeLang(cookies["lang"]);
+    const lang = normalizeLang(cookies["lang"], shop.defaultLang);
     const t = messages[lang];
     const setCookies: string[] = [];
     let sid = cookies["sid"] && /^[a-f0-9]{32}$/.test(cookies["sid"]) ? cookies["sid"] : undefined;
@@ -182,7 +269,7 @@ export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer;
       setCookies.push(`sid=${sid}; Path=/; HttpOnly; SameSite=Lax${config.publicUrl.startsWith("https://") ? "; Secure" : ""}`);
     }
     const session = sid;
-    const ctx = async (): Promise<Ctx> => ({ lang, cartCount: (await store.getCart(session)).reduce((n, l) => n + l.quantity, 0), current: url.pathname + url.search, mode: config.mode, emailEnabled });
+    const ctx = async (): Promise<Ctx> => ({ lang, cartCount: (await store.getCart(session)).reduce((n, l) => n + l.quantity, 0), current: url.pathname + url.search, mode: config.mode, emailEnabled, shop, operator });
     const html = (status: number, body: string, extra: Record<string, string> = {}) => {
       res.writeHead(status, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "set-cookie": setCookies, ...extra });
       res.end(body);
@@ -213,38 +300,51 @@ export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer;
     let m = /^\/lang\/(\w+)$/.exec(path);
     if (m) {
       const next = url.searchParams.get("next") ?? "/";
-      setCookies.push(`lang=${normalizeLang(m[1])}; Path=/; SameSite=Lax${config.publicUrl.startsWith("https://") ? "; Secure" : ""}`);
+      setCookies.push(`lang=${normalizeLang(m[1], shop.defaultLang)}; Path=/; SameSite=Lax${config.publicUrl.startsWith("https://") ? "; Secure" : ""}`);
       return redirect(next.startsWith("/") ? next : "/");
     }
 
     // ---- catalog and cart ------------------------------------------------
-    if (path === "/" && method === "GET") return html(200, catalogPage(await ctx(), url.searchParams.has("added") ? t.addedToCart : undefined));
+    if (path === "/" && method === "GET") {
+      if (shop.digital) return html(200, courseCatalogPage(await ctx()));
+      return html(200, catalogPage(await ctx(), url.searchParams.has("added") ? t.addedToCart : undefined));
+    }
+    m = /^\/courses\/([a-z0-9-]+)$/.exec(path);
+    if (m && method === "GET" && shop.digital) {
+      const product = findProduct(m[1]!, shop.products);
+      return product ? html(200, coursePage(await ctx(), product)) : html(404, notFoundPage(await ctx()));
+    }
 
     if (path === "/cart/add" && method === "POST") {
       const form = await readForm(req);
-      const product = findProduct(form.get("product") ?? "");
+      const product = findProduct(form.get("product") ?? "", shop.products);
       if (!product) return html(404, notFoundPage(await ctx()));
+      if (shop.digital) {
+        // A course is bought once: adding it again changes nothing.
+        await store.setCartLine(session, product.id, 1);
+        return redirect("/cart");
+      }
       await store.addToCart(session, product.id, clampQty(form.get("quantity")));
       return redirect("/?added=1");
     }
     if (path === "/cart/update" && method === "POST") {
       const form = await readForm(req);
-      const product = findProduct(form.get("product") ?? "");
-      if (product) await store.setCartLine(session, product.id, clampQty(form.get("quantity"), 0));
+      const product = findProduct(form.get("product") ?? "", shop.products);
+      if (product) await store.setCartLine(session, product.id, Math.min(clampQty(form.get("quantity"), 0), shop.digital ? 1 : 99));
       return redirect("/cart");
     }
-    if (path === "/cart" && method === "GET") return html(200, cartPage(await ctx(), priceCart(await store.getCart(session))));
+    if (path === "/cart" && method === "GET") return html(200, cartPage(await ctx(), priceCart(await store.getCart(session), shop.products)));
 
     // ---- checkout ---------------------------------------------------------
     if (path === "/checkout" && method === "GET") {
-      const cart = priceCart(await store.getCart(session));
+      const cart = priceCart(await store.getCart(session), shop.products);
       if (cart.lines.length === 0) return redirect("/cart");
       return html(200, checkoutPage(await ctx(), cart, captchaWidget()));
     }
 
     if (path === "/checkout" && method === "POST") {
       const form = await readForm(req);
-      const cart = priceCart(await store.getCart(session));
+      const cart = priceCart(await store.getCart(session), shop.products);
       if (cart.lines.length === 0) return redirect("/cart");
       const customer = {
         name: (form.get("name") ?? "").trim().replace(/\s+/g, " ").slice(0, 80),
@@ -256,6 +356,7 @@ export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer;
       if (customer.name.length < 2) return rerender(t.nameRequired);
       const phone = normalizeAlgerianPhone(customer.phone);
       if (!phone) return rerender(t.phoneInvalid);
+      if (shop.digital && !customer.email) return rerender(shop.courseText![lang].emailRequired);
       if (customer.email && !isPlausibleEmail(customer.email)) return rerender(t.emailInvalid);
       if (form.get("terms") !== "yes") return rerender(t.termsRequired);
       if (recaptcha) {
@@ -273,12 +374,12 @@ export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer;
       // 1. Persist first. 2. Register. 3. Store orderId. 4. Redirect to formUrl only.
       const order = await store.createPending({
         amountMinor: cart.totalMinor,
-        description: cart.lines.map((l) => `${l.product.name[lang]} x${l.quantity}`).join(", ").slice(0, 512),
+        description: cart.lines.map((l) => (shop.digital ? l.product.name[lang] : `${l.product.name[lang]} x${l.quantity}`)).join(", ").slice(0, 512),
         language: lang,
         sessionId: session,
         customerName: customer.name,
         customerPhone: phone,
-        customerAddress: customer.address || null,
+        customerAddress: shop.digital ? null : customer.address || null,
         customerEmail: email || null,
         items: cart.lines.map((l) => ({ productId: l.product.id, name: l.product.name[lang], unitMinor: l.product.priceMinor, quantity: l.quantity })),
       });
@@ -331,7 +432,7 @@ export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer;
       if (!found || found.sessionId !== session) return html(404, notFoundPage(await ctx()));
       const order = await refreshFromSatim(found);
       const ack = order.ackJson ? (JSON.parse(order.ackJson) as AcknowledgeResult) : undefined;
-      return html(200, orderDetailPage(await ctx(), order, await store.items(order.orderNumber), ack));
+      return html(200, orderDetailPage(await ctx(), order, await store.items(order.orderNumber), ack, await accessFor(order, true)));
     }
 
     m = /^\/orders\/([A-Z0-9]{1,10})\/receipt(\.pdf)?$/.exec(path);
@@ -356,7 +457,7 @@ export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer;
       const email = (form.get("email") ?? "").trim();
       const data = { order, ack: JSON.parse(order.ackJson) as AcknowledgeResult };
       const pageCtx = { ...(await ctx()), lang: order.language };
-      if (!isPlausibleEmail(email)) return html(400, successPage(pageCtx, data, await store.items(order.orderNumber), undefined, false, true, emailEnabled));
+      if (!isPlausibleEmail(email)) return html(400, successPage(pageCtx, data, await store.items(order.orderNumber), undefined, false, true, emailEnabled, await accessFor(order)));
       const t2 = messages[order.language];
       const items = await store.items(order.orderNumber);
       try {
@@ -369,9 +470,9 @@ export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer;
         });
       } catch (e) {
         console.error(`[merchant] receipt e-mail failed order=${order.orderNumber}: ${e instanceof Error ? e.message : String(e)}`);
-        return html(502, successPage(pageCtx, data, items, undefined, true));
+        return html(502, successPage(pageCtx, data, items, undefined, true, true, emailEnabled, await accessFor(order)));
       }
-      return html(200, successPage(pageCtx, data, items, email));
+      return html(200, successPage(pageCtx, data, items, email, false, true, emailEnabled, await accessFor(order)));
     }
 
     // ---- operational endpoints: bearer token required whenever one is configured
@@ -389,15 +490,16 @@ export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer;
     if (m && method === "GET") {
       const order = await store.get(m[1]!);
       if (!order) return json(res, 404, { error: "not found" });
-      return json(res, 200, { ...redact(order), items: await store.items(order.orderNumber), fulfilments: await store.fulfilmentCount(order.orderNumber) });
+      return json(res, 200, { ...redact(order), items: await store.items(order.orderNumber), fulfilments: await store.fulfilmentCount(order.orderNumber), deliveries: Object.fromEntries(await store.deliveries(order.orderNumber)) });
     }
     if (path === "/admin/reconcile" && (method === "POST" || method === "GET")) {
       const olderThan = Number(url.searchParams.get("olderThan") ?? config.reconcileAfterSeconds);
       return json(res, 200, await reconcile(olderThan));
     }
-    if ((path === "/conditions" || path === "/terms") && method === "GET") return html(200, legalPage(await ctx(), termsPage(lang, operator)));
-    if ((path === "/confidentialite" || path === "/privacy") && method === "GET") return html(200, legalPage(await ctx(), privacyPage(lang, operator)));
-    if (path === "/healthz") return json(res, 200, { ok: true, mode: config.mode });
+    if ((path === "/conditions" || path === "/terms") && method === "GET") return html(200, legalPage(await ctx(), shop.digital ? courseTermsPage(lang, operator) : termsPage(lang, operator)));
+    if ((path === "/confidentialite" || path === "/privacy") && method === "GET") return html(200, legalPage(await ctx(), shop.digital ? coursePrivacyPage(lang, operator) : privacyPage(lang, operator)));
+    if (path === "/contact" && method === "GET" && shop.digital) return html(200, contactPage(await ctx(), operator));
+    if (path === "/healthz") return json(res, 200, { ok: true, mode: config.mode, ...(shop.id === "demo" ? {} : { store: shop.id }) });
 
     return html(404, layout(await ctx(), "404", `<h1>404</h1><p>${esc(t.notFound)}</p>`));
   }
@@ -408,6 +510,8 @@ export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer;
       const { order: after } = await settle(order);
       results.push({ orderNumber: after.orderNumber, state: after.state });
     }
+    // Enrolments that failed earlier (the course platform was unreachable, say).
+    if (shop.digital && enroller) for (const order of await store.ordersAwaitingDelivery()) await deliver(order.orderNumber);
     return results;
   }
 

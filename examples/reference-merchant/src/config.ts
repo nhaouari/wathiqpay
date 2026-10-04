@@ -23,6 +23,17 @@ export interface MerchantConfig {
   satim: { username: string; password: string; terminalId: string; baseUrl: string | undefined };
   /** Orders still "registered" after this many seconds are reconciled by the closed-browser job. */
   reconcileAfterSeconds: number;
+  /** Which shop this deployment serves; "demo" when omitted. */
+  store?: "demo" | "courses";
+  /** OnlineCourseHost integration token (Admin > Settings > Integrations > Zapier). Course store only. */
+  och?: { token: string; baseUrl?: string | undefined } | undefined;
+  /** Where buyers follow their courses. */
+  academyUrl?: string;
+  /**
+   * Enrol buyers outside production too. Off by default: SATIM's test cards
+   * are public, so a test payment must not open a real course.
+   */
+  enrollInTestMode?: boolean;
 }
 
 export function loadDotEnv(path = ".env"): void {
@@ -54,6 +65,9 @@ export function configFromEnv(env: NodeJS.ProcessEnv = process.env): MerchantCon
   if (env["VERCEL"] && dbUrl.startsWith("file:")) {
     throw new Error("MERCHANT_DB_URL must point to a hosted libSQL database (libsql://…) on Vercel; the filesystem there is read-only and not persistent. See examples/reference-merchant/deploy/vercel.md.");
   }
+  const store = env["MERCHANT_STORE"] === "courses" ? "courses" : "demo";
+  const ochToken = env["OCH_INTEGRATION_TOKEN"] || undefined;
+  if (store === "courses" && mode === "production" && !ochToken) throw new Error("OCH_INTEGRATION_TOKEN is required to sell courses in production");
   const adminToken = env["MERCHANT_ADMIN_TOKEN"] || undefined;
   if (mode !== "simulator" && !adminToken) throw new Error("MERCHANT_ADMIN_TOKEN is required outside simulator mode");
   return {
@@ -72,6 +86,10 @@ export function configFromEnv(env: NodeJS.ProcessEnv = process.env): MerchantCon
     recaptchaSecretKey: env["RECAPTCHA_SECRET_KEY"] || undefined,
     satim,
     reconcileAfterSeconds: Number(env["MERCHANT_RECONCILE_AFTER"] ?? 600),
+    store,
+    och: ochToken ? { token: ochToken, baseUrl: env["OCH_BASE_URL"] || undefined } : undefined,
+    academyUrl: (env["ACADEMY_URL"] ?? "https://academy.gpt4ar.com").replace(/\/+$/, ""),
+    enrollInTestMode: env["COURSES_ENROLL_IN_TEST"] === "1",
   };
 }
 

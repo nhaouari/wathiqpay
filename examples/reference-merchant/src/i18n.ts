@@ -264,17 +264,21 @@ const ar: typeof fr = {
   language: "اللغة",
 };
 
-export const messages: Record<Lang, typeof fr> = { FR: fr, EN: en, AR: ar };
+export type Messages = typeof fr;
 
-export function normalizeLang(value: string | undefined): Lang {
+export const messages: Record<Lang, Messages> = { FR: fr, EN: en, AR: ar };
+
+export function normalizeLang(value: string | undefined, fallback: Lang = "FR"): Lang {
   const v = (value ?? "").toUpperCase();
-  return v === "AR" || v === "EN" ? v : "FR";
+  return v === "AR" || v === "EN" || v === "FR" ? v : fallback;
 }
 
 export function formatAmount(minor: string, lang: Lang): string {
   const whole = minor.slice(0, -2) || "0";
   const fraction = minor.slice(-2).padStart(2, "0");
-  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, lang === "EN" ? "," : " ");
+  // In right-to-left text a plain space lets the browser reorder the digit groups
+  // ("1 500" shows as "500 1"); a no-break space keeps the number in one piece.
+  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, lang === "EN" ? "," : lang === "AR" ? "\u00a0" : " ");
   const sep = lang === "EN" ? "." : ",";
   return `${grouped}${sep}${fraction} ${messages[lang].currency}`;
 }

@@ -1,8 +1,9 @@
 import { messages, formatAmount, formatDateTime, type Lang } from "./i18n.js";
 import type { OrderRow, OrderItem, CartLine } from "./store.js";
-import { PRODUCTS, findProduct, productImg, type Product } from "./catalog.js";
+import { findProduct, productImg, type Product } from "./catalog.js";
+import { demoShop, type Shop } from "./shops.js";
 import type { AcknowledgeResult } from "../../../src/index.js";
-import type { LegalPage } from "./legal.js";
+import type { LegalPage, Operator } from "./legal.js";
 
 export function esc(s: unknown): string {
   return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
@@ -75,9 +76,38 @@ small,.note{color:var(--ink-2);font-size:.85rem}
 .ok{color:var(--ok)}.ko{color:var(--ko)}.hold{color:var(--hold)}
 .state{display:inline-block;padding:.15rem .55rem;border-radius:3px;font-size:.82rem;font-weight:500;background:var(--sand-2);color:var(--ink-2)}.state.paid{background:#EAF3EC;color:var(--ok)}.state.declined,.state.failed,.state.reversed{background:#FBECEC;color:var(--ko)}.state.unknown,.state.review,.state.registered,.state.partially_refunded{background:#FBF1D9;color:var(--hold)}
 .empty{max-width:32rem;padding:2rem 0}
+/* course store */
+.strip{background:var(--blue);color:#fff;font-size:.86rem;text-align:center;padding:.5rem 0}
+.courses .wordmark{display:inline-flex;align-items:center;gap:.6rem}.mark{flex:none;width:2rem;height:2rem;border-radius:7px;background:var(--blue);color:#fff;display:inline-grid;place-items:center;font-family:var(--serif);font-size:1.15rem;font-weight:600;line-height:1}
+.courses header .wrap{align-items:center}
+.hero{padding:1rem 0 2.2rem}.hero h1{max-width:20ch}.hero .lede{max-width:56ch;font-size:1.1rem}
+.assure{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin:0;padding:0;list-style:none}.assure li{display:flex;gap:.8rem;align-items:flex-start;background:#fff;border:1px solid var(--rule);border-radius:10px;padding:1rem 1.1rem}
+.assure svg{flex:none;width:1.6rem;height:1.6rem;color:var(--blue);margin-top:.15rem}.assure strong{display:block;font-size:.98rem}.assure span{display:block;color:var(--ink-2);font-size:.88rem;line-height:1.45;margin-top:.15rem}
+.sec{margin-top:3.2rem}.sec>h2{font-size:1.5rem;margin-bottom:1.1rem}
+.courses .list{grid-template-columns:repeat(2,1fr);gap:1.5rem}.courses .item{display:flex;flex-direction:column;background:#fff;border:1px solid var(--rule);border-radius:12px;overflow:hidden;box-shadow:0 1px 2px rgba(34,30,25,.04)}
+.courses .item .art,.course .art{aspect-ratio:16/9}.courses .item .art{border-radius:0}.item-body{display:flex;flex-direction:column;flex:1;padding:1.1rem 1.3rem 1.3rem}
+.courses .item h2{margin:.2rem 0 .3rem;font-size:1.15rem;line-height:1.4}.courses .item h2 a{color:inherit;text-decoration:none}.courses .item h2 a:hover{text-decoration:underline}
+.courses .item .money{margin-top:auto;padding-top:.8rem;font-size:1.35rem}.courses .item .add{flex-wrap:wrap}.add .add{margin:0}
+.courses .thumb{width:6rem;height:3.4rem}
+.trainer{display:flex;gap:1.4rem;align-items:flex-start;background:#fff;border:1px solid var(--rule);border-radius:12px;padding:1.3rem 1.4rem}.trainer img{flex:none;width:6.5rem;height:6.5rem;border-radius:50%;object-fit:cover}.trainer strong{display:block;font-size:1.1rem}.trainer .role{display:block;color:var(--ink-2);font-size:.93rem}.trainer ul{margin:.6rem 0 0;padding-inline-start:1.2rem}.trainer li{margin:.25rem 0;font-size:.95rem}@media(max-width:34rem){.trainer{flex-direction:column}}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:1.2rem;margin:0;padding:0;list-style:none;counter-reset:step}.steps li{counter-increment:step;border-top:2px solid var(--blue);padding-top:.9rem}
+.steps li:before{content:counter(step);display:inline-grid;place-items:center;width:1.9rem;height:1.9rem;border-radius:50%;background:var(--sand-2);font-weight:600;font-size:.95rem;margin-bottom:.5rem}.steps strong{display:block}.steps span{display:block;color:var(--ink-2);font-size:.93rem;margin-top:.2rem}
+.faq details{border-bottom:1px solid var(--rule);padding:.2rem 0}.faq summary{cursor:pointer;font-weight:600;padding:.75rem 0;min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:1rem;list-style:none}.faq summary::-webkit-details-marker{display:none}.faq summary:after{content:"+";font-size:1.3rem;font-weight:400;color:var(--ink-2)}.faq details[open] summary:after{content:"–"}.faq details p{color:var(--ink-2);margin:0 0 1rem;max-width:60ch}
+.course{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(18rem,.85fr);grid-template-areas:"head buy" "body buy";gap:1.2rem 3rem;align-items:start;margin-top:1rem}.c-head{grid-area:head}.c-body{grid-area:body}
+.buy{grid-area:buy;position:sticky;top:1.5rem;background:#fff;border:1px solid var(--rule);border-radius:12px;padding:1.4rem 1.5rem;box-shadow:0 6px 24px rgba(34,30,25,.06)}.buy .money{font-size:2rem;display:block;margin:0 0 1rem}.buy .add{margin:0}.buy .add button{width:100%;padding:.85rem 1rem;font-size:1.05rem}.buy form{width:100%}
+.buy ul{list-style:none;margin:1.2rem 0 0;padding:1rem 0 0;border-top:1px solid var(--rule)}.buy li{display:flex;gap:.6rem;align-items:flex-start;font-size:.92rem;margin:.55rem 0}.buy li svg{flex:none;width:1.15rem;height:1.15rem;color:var(--ok);margin-top:.2rem}
+.buy .cards{display:inline-block;border:1px solid var(--rule);margin-top:.9rem}.buy .cards img{width:6rem}
+.contact-card{background:#fff;border:1px solid var(--rule);border-radius:12px;padding:1.4rem 1.6rem;max-width:34rem;margin-top:1.4rem}.contact-card dl{display:grid;grid-template-columns:auto 1fr;gap:.6rem 1.4rem;margin:0}.contact-card dt{color:var(--ink-2);font-size:.9rem}.contact-card dd{margin:0}
+.site-foot.rich{background:var(--sand-2);margin-top:3rem}.site-foot.rich .wrap{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:2rem;padding-block:2.4rem 1.6rem;align-items:start}
+.site-foot.rich h2{font-family:var(--sans);font-size:.82rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-2);margin:0 0 .8rem}.site-foot.rich .wordmark{font-size:1.3rem}.site-foot.rich p{margin:.6rem 0 0;font-size:.92rem}
+.foot-links a{display:block;padding:.3rem 0;text-decoration:none;color:var(--ink)}.foot-links a:hover{text-decoration:underline}.foot-pay .cards{display:inline-block;border:1px solid var(--rule)}.foot-pay .cards img{width:6.5rem}
+.site-foot.rich .foot-legal{display:block;border-top:1px solid rgba(34,30,25,.14);padding-block:1rem 1.6rem;font-size:.85rem}
+.tag{display:inline-block;align-self:flex-start;font-size:.82rem;font-weight:500;color:var(--ink-2);background:var(--sand-2);border-radius:3px;padding:.15rem .55rem;margin:0 0 .6rem}
+.feat{margin:.4rem 0 1.2rem;padding-inline-start:1.2rem}.feat li{margin:.3rem 0}
+.access{border:1px solid var(--rule);border-inline-start:4px solid var(--ok);border-radius:6px;background:#fff;padding:1rem 1.2rem;margin:1.6rem 0}.access.hold{border-inline-start-color:var(--saffron)}.access h2{font-family:var(--sans);font-weight:600;font-size:1.05rem;color:var(--ink)}.access p{margin-bottom:.8rem}
 .site-foot{border-top:1px solid var(--rule);margin-top:2rem}.site-foot .wrap{display:flex;flex-wrap:wrap;gap:.6rem 1.6rem;padding-block:1.4rem 2rem;font-size:.9rem;color:var(--ink-2)}.site-foot a{color:var(--ink-2)}
 .legal{max-width:44rem}.legal-sec{margin-top:1.6rem}.legal-sec h2{font-size:1.15rem;margin-bottom:.4rem}.legal-sec p{color:var(--ink-2)}
-@media(max-width:52rem){.lead,.split{grid-template-columns:1fr}.list{grid-template-columns:repeat(2,1fr);gap:1.5rem 1rem}.summary{position:static}header .wrap{flex-wrap:wrap;gap:.6rem 1.2rem}nav{margin-inline-start:0;flex-wrap:wrap;gap:.9rem;font-size:.92rem}}
+@media(max-width:52rem){.lead,.split{grid-template-columns:1fr}.course{grid-template-columns:1fr;grid-template-areas:"head" "buy" "body"}.buy{position:static}.courses .list,.assure,.steps,.site-foot.rich .wrap{grid-template-columns:1fr}.list{grid-template-columns:repeat(2,1fr);gap:1.5rem 1rem}.summary{position:static}header .wrap{flex-wrap:wrap;gap:.6rem 1.2rem}nav{margin-inline-start:0;flex-wrap:wrap;gap:.9rem;font-size:.92rem}}
 @media(max-width:34rem){.list{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:no-preference){button,.btn{transition:background-color .15s,border-color .15s}}
 @media print{header,.actions,form,.no-print{display:none}body{background:#fff}.receipt{background:#fff;border:1px solid #999}.receipt:after{display:none}}
@@ -85,7 +115,7 @@ small,.note{color:var(--ink-2);font-size:.85rem}
 
 const fonts = `<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23143B64'/%3E%3Ctext x='16' y='23' text-anchor='middle' fill='white' font-size='22'%3EW%3C/text%3E%3C/svg%3E"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=Noto+Naskh+Arabic:wght@400;500;600&family=Noto+Sans+Arabic:wght@400;500;600&display=swap">`;
 
-const cardMark = `<span class="cards"><img src="/images/cib-edahabia-logo.png" width="363" height="232" alt="CIB · Edahabia"></span>`;
+export const cardMark = `<span class="cards"><img src="/images/cib-edahabia-logo.png" width="363" height="232" alt="CIB · Edahabia"></span>`;
 
 export interface Ctx {
   lang: Lang;
@@ -93,28 +123,44 @@ export interface Ctx {
   current?: string;
   mode?: "simulator" | "certification" | "production";
   emailEnabled?: boolean;
+  /** The shop being served; the demo shop when omitted. */
+  shop?: Shop;
+  /** The seller, named in the course store's footer and contact page. */
+  operator?: Operator;
 }
+
+export const shopOf = (ctx: Ctx): Shop => ctx.shop ?? demoShop;
+const tr = (ctx: Ctx) => shopOf(ctx).messages[ctx.lang];
 
 const demoCopy = {
   FR: { title: "DÉMONSTRATION — PAS UNE BOUTIQUE RÉELLE", text: "Les articles, prix et commandes servent uniquement à tester WathiqPay. Aucun achat ni aucune livraison réels. Utilisez uniquement les cartes de test SATIM, jamais votre carte personnelle, et des coordonnées fictives.", pay: "Tester le paiement", catalog: "Catalogue de démonstration : aucun article n’est réellement vendu ou livré." },
   EN: { title: "DEMO — NOT A REAL STORE", text: "Products, prices and orders are only for testing WathiqPay. No real purchases or deliveries. Use only SATIM test cards, never your personal card, and fictional contact details.", pay: "Test payment", catalog: "Demo catalog: no products are actually sold or delivered." },
   AR: { title: "عرض تجريبي — ليس متجرًا حقيقيًا", text: "المنتجات والأسعار والطلبات مخصصة لاختبار WathiqPay فقط. لا توجد مشتريات أو عمليات توصيل فعلية. استخدم بطاقات اختبار SATIM فقط، وليس بطاقتك الشخصية، وبيانات اتصال وهمية.", pay: "اختبار الدفع", catalog: "كتالوج تجريبي: لا يتم بيع المنتجات أو توصيلها فعليًا." },
 };
-const isDemo = (ctx: Ctx) => ctx.mode === "simulator" || ctx.mode === "certification";
+// Only the demonstration shop announces itself as a demo; the course store is a real store in every mode.
+const isDemo = (ctx: Ctx) => shopOf(ctx).id === "demo" && (ctx.mode === "simulator" || ctx.mode === "certification");
 
 export function layout(ctx: Ctx, title: string, body: string): string {
-  const t = messages[ctx.lang];
+  const t = tr(ctx);
+  const shop = shopOf(ctx);
   const current = ctx.current ?? "/";
   const skip = { FR: "Aller au contenu principal", EN: "Skip to main content", AR: "انتقل إلى المحتوى الرئيسي" }[ctx.lang];
   const demo = demoCopy[ctx.lang];
+  const c = shop.courseText?.[ctx.lang];
+  const footer = c
+    ? `<footer class="site-foot rich"><div class="wrap"><div><a class="wordmark" href="/"><span class="mark" aria-hidden="true">W</span>${esc(t.shopTitle)}</a><p>${esc(c.footAbout)}</p></div>
+<div class="foot-links"><h2>${esc(c.footLinks)}</h2><a href="/">${esc(t.shop)}</a><a href="/orders">${esc(t.myOrders)}</a><a href="/conditions">${esc(t.legalTerms)}</a><a href="/confidentialite">${esc(t.legalPrivacy)}</a><a href="/contact">${esc(c.contact)}</a></div>
+<div class="foot-pay"><h2>${esc(c.footPayment)}</h2>${cardMark}<p>${esc(c.securePay)}</p><p>${esc(t.support)}</p></div></div>
+<div class="wrap foot-legal">© ${new Date().getFullYear()} ${esc(ctx.operator?.name ?? t.shopTitle)}. ${esc(c.rights)}</div></footer>`
+    : `<footer class="site-foot"><div class="wrap"><a href="/conditions">${esc(t.legalTerms)}</a><a href="/confidentialite">${esc(t.legalPrivacy)}</a><span>${esc(t.support)}</span></div></footer>`;
   const langLinks = (["FR", "AR", "EN"] as Lang[])
     .map((l) => (l === ctx.lang ? `<strong lang="${l.toLowerCase()}" aria-current="true">${l}</strong>` : `<a lang="${l.toLowerCase()}" hreflang="${l.toLowerCase()}" href="/lang/${l}?next=${encodeURIComponent(current)}">${l}</a>`))
     .join("");
   return `<!doctype html><html lang="${ctx.lang.toLowerCase()}" dir="${t.dir}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)} – ${esc(t.shopTitle)}</title>${fonts}<style>${css}</style></head>
-<body><a class="skip-link" href="#main">${skip}</a>${isDemo(ctx) ? `<aside class="test-banner" aria-label="${esc(demo.title)}"><div class="wrap"><strong>${esc(demo.title)}</strong><p>${esc(demo.text)}</p></div></aside>` : ""}<header><div class="wrap"><a class="wordmark" href="/">${esc(t.shopTitle)}${isDemo(ctx) ? " · DEMO" : ""}</a>
+<body class="${shop.id}"><a class="skip-link" href="#main">${skip}</a>${isDemo(ctx) ? `<aside class="test-banner" aria-label="${esc(demo.title)}"><div class="wrap"><strong>${esc(demo.title)}</strong><p>${esc(demo.text)}</p></div></aside>` : ""}${c ? `<div class="strip"><div class="wrap">${esc(c.strip)}</div></div>` : ""}<header><div class="wrap"><a class="wordmark" href="/">${c ? `<span class="mark" aria-hidden="true">W</span>` : ""}${esc(t.shopTitle)}${isDemo(ctx) ? " · DEMO" : ""}</a>
 <nav><a href="/">${esc(t.shop)}</a><a href="/orders">${esc(t.myOrders)}</a><a href="/cart">${esc(t.cart)}<span class="count">${ctx.cartCount}</span></a><span class="lang">${langLinks}</span></nav></div></header>
 <main id="main" tabindex="-1"><div class="wrap">${body}</div></main>
-<footer class="site-foot"><div class="wrap"><a href="/conditions">${esc(t.legalTerms)}</a><a href="/confidentialite">${esc(t.legalPrivacy)}</a><span>${esc(t.support)}</span></div></footer></body></html>`;
+${footer}</body></html>`;
 }
 
 function addForm(t: (typeof messages)["FR"], p: Product): string {
@@ -122,8 +168,8 @@ function addForm(t: (typeof messages)["FR"], p: Product): string {
 }
 
 export function catalogPage(ctx: Ctx, notice?: string): string {
-  const t = messages[ctx.lang];
-  const [lead, ...rest] = PRODUCTS;
+  const t = tr(ctx);
+  const [lead, ...rest] = shopOf(ctx).products;
   const items = rest
     .map((p) => `<article class="item"><span class="art">${productImg(p, ctx.lang)}</span><h2>${esc(p.name[ctx.lang])}</h2><p>${esc(p.blurb[ctx.lang])}</p><div class="money">${esc(formatAmount(p.priceMinor, ctx.lang))}</div>${addForm(t, p)}</article>`)
     .join("");
@@ -143,11 +189,11 @@ export interface PricedLine {
   lineMinor: string;
 }
 
-export function priceCart(lines: CartLine[]): { lines: PricedLine[]; totalMinor: string } {
+export function priceCart(lines: CartLine[], products?: readonly Product[]): { lines: PricedLine[]; totalMinor: string } {
   const priced: PricedLine[] = [];
   let total = 0n;
   for (const l of lines) {
-    const product = findProduct(l.productId);
+    const product = findProduct(l.productId, products);
     if (!product) continue;
     const lineMinor = (BigInt(product.priceMinor) * BigInt(l.quantity)).toString();
     total += BigInt(lineMinor);
@@ -156,12 +202,14 @@ export function priceCart(lines: CartLine[]): { lines: PricedLine[]; totalMinor:
   return { lines: priced, totalMinor: total.toString() };
 }
 
-function linesTable(lang: Lang, lines: PricedLine[], totalMinor: string, editable: boolean): string {
-  const t = messages[lang];
+function linesTable(ctx: Ctx, lines: PricedLine[], totalMinor: string, editable: boolean): string {
+  const t = tr(ctx);
+  const lang = ctx.lang;
+  const digital = shopOf(ctx).digital;
   const rows = lines
     .map(
       ({ product, quantity, lineMinor }) => `<tr class="line"><td><span class="thumb">${productImg(product, lang, "4rem")}</span>${esc(product.name[lang])}</td>
-<td class="num">${editable ? `<form method="post" action="/cart/update"><input type="hidden" name="product" value="${product.id}"><input type="number" name="quantity" value="${quantity}" min="0" max="99" aria-label="${esc(t.quantity)}"><button class="quiet" type="submit">${esc(t.update)}</button></form>` : `× ${quantity}`}</td>
+<td class="num">${!editable ? `× ${quantity}` : digital ? `<form method="post" action="/cart/update"><input type="hidden" name="product" value="${product.id}"><input type="hidden" name="quantity" value="0"><button class="quiet" type="submit">${esc(t.remove)}</button></form>` : `<form method="post" action="/cart/update"><input type="hidden" name="product" value="${product.id}"><input type="number" name="quantity" value="${quantity}" min="0" max="99" aria-label="${esc(t.quantity)}"><button class="quiet" type="submit">${esc(t.update)}</button></form>`}</td>
 <td class="num money">${esc(formatAmount(lineMinor, lang))}</td></tr>`,
     )
     .join("");
@@ -169,12 +217,12 @@ function linesTable(lang: Lang, lines: PricedLine[], totalMinor: string, editabl
 }
 
 export function cartPage(ctx: Ctx, cart: { lines: PricedLine[]; totalMinor: string }): string {
-  const t = messages[ctx.lang];
+  const t = tr(ctx);
   if (cart.lines.length === 0) return layout(ctx, t.cart, `<div class="empty"><h1>${esc(t.cart)}</h1><p class="lede">${esc(t.cartEmpty)}</p><a class="btn" href="/">${esc(t.continueShopping)}</a></div>`);
   return layout(
     ctx,
     t.cart,
-    `<h1>${esc(t.cart)}</h1>${linesTable(ctx.lang, cart.lines, cart.totalMinor, true)}
+    `<h1>${esc(t.cart)}</h1>${linesTable(ctx, cart.lines, cart.totalMinor, true)}
 <div class="actions"><a class="btn" href="/checkout">${esc(t.proceed)}</a><a class="btn quiet" href="/">${esc(t.continueShopping)}</a></div>`,
   );
 }
@@ -189,9 +237,10 @@ export interface CustomerInput {
 export type CaptchaWidget = { kind: "math"; question: string; token: string } | { kind: "recaptcha"; siteKey: string };
 
 export function checkoutPage(ctx: Ctx, cart: { lines: PricedLine[]; totalMinor: string }, captcha: CaptchaWidget | { question: string; token: string }, opts: { error?: string; customer?: CustomerInput } = {}): string {
-  const t = messages[ctx.lang];
+  const t = tr(ctx);
+  const digital = shopOf(ctx).digital;
   const amount = formatAmount(cart.totalMinor, ctx.lang);
-  const summaryRows = cart.lines.map((l) => `<tr><td>${esc(l.product.name[ctx.lang])} × ${l.quantity}</td><td class="num money">${esc(formatAmount(l.lineMinor, ctx.lang))}</td></tr>`).join("");
+  const summaryRows = cart.lines.map((l) => `<tr><td>${esc(l.product.name[ctx.lang])}${digital ? "" : ` × ${l.quantity}`}</td><td class="num money">${esc(formatAmount(l.lineMinor, ctx.lang))}</td></tr>`).join("");
   return layout(
     ctx,
     t.checkout,
@@ -201,8 +250,8 @@ export function checkoutPage(ctx: Ctx, cart: { lines: PricedLine[]; totalMinor: 
   <h2>${esc(t.customerDetails)}</h2>
   <label class="field"><span>${esc(t.fullName)}</span><input type="text" name="name" value="${esc(opts.customer?.name ?? "")}" required autocomplete="name" maxlength="80"></label>
   <label class="field"><span>${esc(t.phone)}</span><input type="text" name="phone" value="${esc(opts.customer?.phone ?? "")}" required autocomplete="tel" inputmode="tel" placeholder="${esc(t.phoneHint)}"></label>
-  <label class="field"><span>${esc(t.address)}</span><input type="text" name="address" value="${esc(opts.customer?.address ?? "")}" autocomplete="street-address" maxlength="200"></label>
-  ${ctx.emailEnabled !== false ? `<label class="field"><span>${esc(t.customerEmail)}</span><input type="email" name="email" value="${esc(opts.customer?.email ?? "")}" autocomplete="email"></label>` : ""}
+  ${digital ? "" : `<label class="field"><span>${esc(t.address)}</span><input type="text" name="address" value="${esc(opts.customer?.address ?? "")}" autocomplete="street-address" maxlength="200"></label>`}
+  ${digital || ctx.emailEnabled !== false ? `<label class="field"><span>${esc(t.customerEmail)}</span><input type="email" name="email" value="${esc(opts.customer?.email ?? "")}" autocomplete="email"${digital ? " required" : ""}></label>` : ""}
   <div class="terms"><h2>${esc(t.terms)}</h2><p>${esc(t.termsText)}</p><p><a href="/conditions" target="_blank" rel="noopener">${esc(t.readFullTerms)}</a> · <a href="/confidentialite" target="_blank" rel="noopener">${esc(t.legalPrivacy)}</a></p><label class="check"><input type="checkbox" name="terms" value="yes" required><span>${esc(t.acceptTerms)}</span></label></div>
   ${"kind" in captcha && captcha.kind === "recaptcha"
     ? `<div class="captcha recaptcha"><div class="g-recaptcha" data-sitekey="${esc(captcha.siteKey)}"></div></div><script src="https://www.google.com/recaptcha/api.js?hl=${ctx.lang.toLowerCase()}" async defer></script>`
@@ -215,7 +264,7 @@ export function checkoutPage(ctx: Ctx, cart: { lines: PricedLine[]; totalMinor: 
 }
 
 export function ordersPage(ctx: Ctx, orders: OrderRow[]): string {
-  const t = messages[ctx.lang];
+  const t = tr(ctx);
   if (orders.length === 0) return layout(ctx, t.myOrders, `<div class="empty"><h1>${esc(t.myOrders)}</h1><p class="lede">${esc(t.noOrders)}</p><a class="btn" href="/">${esc(t.continueShopping)}</a></div>`);
   const rows = orders
     .map((o) => `<tr><td><a href="/orders/${o.orderNumber}">${o.orderNumber}</a></td><td>${esc(formatDateTime(o.createdAt, ctx.lang))}</td><td class="num money">${esc(formatAmount(o.amountMinor, ctx.lang))}</td><td><span class="state ${o.state}">${esc(t.stateLabels[o.state])}</span></td></tr>`)
@@ -223,8 +272,32 @@ export function ordersPage(ctx: Ctx, orders: OrderRow[]): string {
   return layout(ctx, t.myOrders, `<h1>${esc(t.myOrders)}</h1><table><thead><tr><th>${esc(t.orderNumber)}</th><th>${esc(t.date)}</th><th class="num">${esc(t.amount)}</th><th>${esc(t.status)}</th></tr></thead><tbody>${rows}</tbody></table>`);
 }
 
-export function orderDetailPage(ctx: Ctx, order: OrderRow, items: OrderItem[], ack: AcknowledgeResult | undefined): string {
-  const t = messages[ctx.lang];
+/** Where a paid course order stands: enrolled, or still being enrolled. */
+export interface Access {
+  state: "ready" | "pending";
+  email: string;
+  url: string;
+}
+
+function accessTemplate(ctx: Ctx, access: Access): string {
+  const c = shopOf(ctx).courseText![ctx.lang];
+  return { ready: c.accessReady, pending: c.accessPending }[access.state];
+}
+
+/** Plain text, for e-mail: the platform's address is written out. */
+export function accessText(ctx: Ctx, access: Access): string {
+  return accessTemplate(ctx, access).replace("{url}", access.url).replace("{email}", access.email);
+}
+
+function accessBlock(ctx: Ctx, access: Access | undefined): string {
+  const c = shopOf(ctx).courseText?.[ctx.lang];
+  if (!access || !c) return "";
+  const text = esc(accessTemplate(ctx, access)).replace("{url}", `<a href="${esc(access.url)}">${esc(c.platform)}</a>`).replace("{email}", `<strong dir="ltr">${esc(access.email)}</strong>`);
+  return `<section class="access${access.state === "ready" ? "" : " hold"}"><h2>${esc(c.accessTitle)}</h2><p>${text}</p>${access.state === "ready" ? `<a class="btn no-print" href="${esc(access.url)}">${esc(c.accessCta)}</a>` : ""}</section>`;
+}
+
+export function orderDetailPage(ctx: Ctx, order: OrderRow, items: OrderItem[], ack: AcknowledgeResult | undefined, access?: Access): string {
+  const t = tr(ctx);
   const lines = items.map((it) => `<tr><td>${esc(it.name)} × ${it.quantity}</td><td class="num money">${esc(formatAmount((BigInt(it.unitMinor) * BigInt(it.quantity)).toString(), ctx.lang))}</td></tr>`).join("");
   const receipt = order.state === "paid" && ack ? `<div class="actions"><a class="btn quiet" href="/orders/${order.orderNumber}/receipt" target="_blank">${esc(t.print)}</a><a class="btn quiet" href="/orders/${order.orderNumber}/receipt.pdf">${esc(t.downloadPdf)}</a></div>` : "";
   return layout(
@@ -232,7 +305,7 @@ export function orderDetailPage(ctx: Ctx, order: OrderRow, items: OrderItem[], a
     `${t.orderNumber} ${order.orderNumber}`,
     `<div class="result"><h1>${esc(t.orderNumber)} ${order.orderNumber}</h1><p class="status"><span class="state ${order.state}">${esc(t.stateLabels[order.state])}</span> &nbsp; ${esc(formatDateTime(order.createdAt, ctx.lang))}${order.satimOrderId ? `<br><small>${esc(t.transactionId)}: ${esc(order.satimOrderId)}</small>` : ""}</p>
 <table><tbody>${lines}</tbody><tfoot><tr><th>${esc(t.total)}</th><td class="num money">${esc(formatAmount(order.amountMinor, ctx.lang))}</td></tr></tfoot></table>
-<h2 style="margin-top:1.6rem">${esc(t.customer)}</h2><p>${esc(order.customerName ?? "")}<br>${esc(order.customerPhone ?? "")}${order.customerAddress ? `<br>${esc(order.customerAddress)}` : ""}${order.customerEmail ? `<br>${esc(order.customerEmail)}` : ""}</p>
+${accessBlock(ctx, access)}<h2 style="margin-top:1.6rem">${esc(t.customer)}</h2><p>${esc(order.customerName ?? "")}<br>${esc(order.customerPhone ?? "")}${order.customerAddress ? `<br>${esc(order.customerAddress)}` : ""}${order.customerEmail ? `<br>${esc(order.customerEmail)}` : ""}</p>
 ${receipt}<p><a href="/orders">${esc(t.myOrders)}</a></p></div>`,
   );
 }
@@ -255,8 +328,9 @@ export function receiptRows(lang: Lang, { order, ack }: ReceiptData): Array<[str
   ];
 }
 
-function receiptBlock(lang: Lang, data: ReceiptData, items: OrderItem[]): string {
-  const t = messages[lang];
+function receiptBlock(ctx: Ctx, data: ReceiptData, items: OrderItem[]): string {
+  const t = tr(ctx);
+  const lang = ctx.lang;
   const rows = receiptRows(lang, data);
   const amountRow = rows.find(([k]) => k === t.amount)!;
   const dl = rows.filter(([k]) => k !== t.amount).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("");
@@ -264,15 +338,15 @@ function receiptBlock(lang: Lang, data: ReceiptData, items: OrderItem[]): string
   return `<div class="receipt"><p class="receipt-brand">${esc(t.shopTitle)}<span>${esc(t.receipt)}</span></p><dl>${dl}<div class="big"><dt>${esc(amountRow[0])}</dt><dd class="money">${esc(amountRow[1])}</dd></div></dl>${list}</div>`;
 }
 
-export function successPage(ctx: Ctx, data: ReceiptData, items: OrderItem[], emailSentTo?: string, emailError?: boolean, owner = true, emailEnabled = true): string {
-  const t = messages[ctx.lang];
+export function successPage(ctx: Ctx, data: ReceiptData, items: OrderItem[], emailSentTo?: string, emailError?: boolean, owner = true, emailEnabled = true, access?: Access): string {
+  const t = tr(ctx);
   const ref = data.order.orderNumber;
   return layout(
     { ...ctx, current: `/payment/return?ref=${ref}` },
     t.successTitle,
     `<div class="result"><h1 class="ok">${esc(t.successTitle)}</h1><p class="status">${esc(data.ack.respCodeDescription ?? "")}</p>
-${receiptBlock(ctx.lang, data, items)}
-<p class="support">${esc(t.support)}</p>
+${receiptBlock(ctx, data, items)}
+${owner ? accessBlock(ctx, access) : ""}<p class="support">${esc(t.support)}</p>
 ${owner ? `<div class="actions no-print"><a class="btn quiet" href="/orders/${ref}/receipt" target="_blank">${esc(t.print)}</a><a class="btn quiet" href="/orders/${ref}/receipt.pdf">${esc(t.downloadPdf)}</a></div>
 ${emailSentTo ? `<p class="alert good" role="status">${esc(t.emailSent)} ${esc(emailSentTo)}.</p>` : ""}
 ${emailError ? `<p class="alert bad" role="alert">${esc(t.emailFailed)}</p>` : ""}
@@ -282,8 +356,8 @@ ${emailEnabled ? `<form method="post" action="/orders/${ref}/receipt/email"><lab
 }
 
 export function receiptPage(ctx: Ctx, data: ReceiptData, items: OrderItem[]): string {
-  const t = messages[ctx.lang];
-  return layout(ctx, t.receipt, `<div class="result"><h1>${esc(t.receipt)}</h1><p class="status">${esc(t.shopTitle)}</p>${receiptBlock(ctx.lang, data, items)}<p class="support">${esc(t.support)}</p><p class="no-print"><button class="quiet" onclick="print()">${esc(t.print)}</button></p></div>`);
+  const t = tr(ctx);
+  return layout(ctx, t.receipt, `<div class="result"><h1>${esc(t.receipt)}</h1><p class="status">${esc(t.shopTitle)}</p>${receiptBlock(ctx, data, items)}<p class="support">${esc(t.support)}</p><p class="no-print"><button class="quiet" onclick="print()">${esc(t.print)}</button></p></div>`);
 }
 
 /** SATIM action codes that arrive with English-only text (live-observed, 22–23 September 2026). */
@@ -294,7 +368,7 @@ const KNOWN_ACTION_CODES: Record<string, "cancelled" | "authFailed" | "blocked">
 };
 
 export function failurePage(ctx: Ctx, order: OrderRow, ack: AcknowledgeResult | undefined, kind: "declined" | "reversed" | "refunded" | "partially_refunded" | "pending" | "review" | "failed"): string {
-  const t = messages[ctx.lang];
+  const t = tr(ctx);
   let title = t.failureTitle;
   let text: string;
   let cls = "ko";
@@ -357,6 +431,6 @@ export function legalPage(ctx: Ctx, page: LegalPage): string {
 }
 
 export function notFoundPage(ctx: Ctx): string {
-  const t = messages[ctx.lang];
+  const t = tr(ctx);
   return layout(ctx, t.notFound, `<div class="empty"><h1>${esc(t.notFound)}</h1><a class="btn" href="/">${esc(t.backToShop)}</a></div>`);
 }

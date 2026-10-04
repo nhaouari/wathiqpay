@@ -10,3 +10,9 @@ Photos are from Wikimedia Commons, resized and cropped to 1200×900. Each is use
 | `tea-set.jpg` | [File:Tea Set (33076137826).jpg](https://commons.wikimedia.org/wiki/File:Tea_Set_(33076137826).jpg) | Sam Howzit | CC BY 2.0 |
 | `ceramic.jpg` | [File:Tunisian plates.JPG](https://commons.wikimedia.org/wiki/File:Tunisian_plates.JPG) | AmelGhouila | CC BY-SA 4.0 |
 | `honey.jpg` | [File:Antiguan honey products at an exhibition in Saint Lucia.jpg](https://commons.wikimedia.org/wiki/File:Antiguan_honey_products_at_an_exhibition_in_Saint_Lucia.jpg) | Government of Antigua and Barbuda | Public domain |
+
+## Course covers
+
+`course-*.png` were drawn for the course store and are its own artwork.
+
+`trainer.jpg` is the instructor's own portrait, used with his permission.
