@@ -27,13 +27,13 @@ then add an entry and put its cover in `public/images/` (lower-case name, `.png`
 
 ## Deployment
 
-A third Vercel project on the same repository, set up exactly like the demo ([vercel.md](vercel.md)): root directory = repository root, framework preset "Other", its **own** Turso database, domain `store.wathiqpay.com`. Environment variables are those of the demo, with these differences:
+A third Vercel project on the same repository, set up exactly like the demo ([vercel.md](vercel.md)): root directory = repository root, framework preset "Other", its own Turso database (recommended; see below), domain `store.wathiqpay.com`. Environment variables are those of the demo, with these differences:
 
 | Name | Value |
 |---|---|
 | `MERCHANT_STORE` | `courses` |
 | `MERCHANT_PUBLIC_URL` | `https://store.wathiqpay.com` |
-| `MERCHANT_DB_URL`, `MERCHANT_DB_AUTH_TOKEN` | a database of its own, not the demo's |
+| `MERCHANT_DB_URL`, `MERCHANT_DB_AUTH_TOKEN` (or `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`) | preferably a database of its own. Sharing the demo's works while both run on SATIM's test platform: orders are told apart by their products, and each shop only enrols for its own. Separate them before production, when the two shops use different SATIM credentials and one can no longer acknowledge the other's abandoned payments |
 | `OCH_INTEGRATION_TOKEN` | OnlineCourseHost: Admin > Settings > Integrations > Zapier Integrations. Required in production |
 | `ACADEMY_URL` | optional; the course platform's address, shown to enrolled buyers |
 | `LEGAL_NAME`, `LEGAL_ADDRESS`, `LEGAL_RC`, `LEGAL_EMAIL`, `LEGAL_PHONE`, `LEGAL_WEBSITE` | the seller's legal identity and contact, shown on the terms and privacy pages. Set them: a real store must name its seller |

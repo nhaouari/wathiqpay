@@ -226,6 +226,15 @@ describe("course store with enrolment enabled", () => {
     assert.equal(h.enrolled.length, 1);
   });
 
+  test("orders of another shop in the same database are left alone", async () => {
+    const other = await h.app.store.createPending({ amountMinor: "120000", description: "Dattes", language: "FR", items: [{ productId: "dates", name: "Dattes", unitMinor: "120000", quantity: 1 }] });
+    await h.app.store.fulfilOnce(other.orderNumber, "{}");
+    assert.deepEqual(await h.app.store.ordersAwaitingDelivery(["n8n-automation", "prompt-engineering"]), []);
+    const before = h.enrolled.length;
+    await h.app.reconcile(0);
+    assert.equal(h.enrolled.length, before);
+  });
+
   test("a declined payment enrols nobody", async () => {
     h.enrolled.length = 0;
     const b = new Browser();
@@ -254,7 +263,7 @@ describe("course store on SATIM's test platform", () => {
     assert.equal(h.sent.length, 0);
     const rec = (await (await fetch(`${h.origin}/admin/orders/${ref}`)).json()) as { deliveries: Record<string, { skipped: boolean }> };
     assert.equal(rec.deliveries["n8n-automation"]!.skipped, true);
-    assert.deepEqual(await h.app.store.ordersAwaitingDelivery(), [], "nothing is left to enrol if the store later goes live on the same database");
+    assert.deepEqual(await h.app.store.ordersAwaitingDelivery(["n8n-automation", "prompt-engineering"]), [], "nothing is left to enrol if the store later goes live on the same database");
   });
 });
 

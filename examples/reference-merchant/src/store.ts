@@ -289,15 +289,20 @@ export class OrderStore {
     );
   }
 
-  /** Paid orders with an item still to deliver and attempts left. */
-  async ordersAwaitingDelivery(): Promise<OrderRow[]> {
+  /**
+   * Paid orders with one of these products still to deliver and attempts left.
+   * Only the caller's own products count, so another shop's orders in the
+   * same database are never picked up.
+   */
+  async ordersAwaitingDelivery(productIds: readonly string[]): Promise<OrderRow[]> {
+    if (productIds.length === 0) return [];
     return (
       await this.many(
         `SELECT DISTINCT o.* FROM orders o JOIN order_items i ON i.order_number = o.order_number
          LEFT JOIN deliveries d ON d.order_number = i.order_number AND d.product_id = i.product_id
-         WHERE o.state = 'paid' AND (d.order_number IS NULL OR (d.delivered_at IS NULL AND d.skipped = 0 AND d.attempts < ?))
+         WHERE o.state = 'paid' AND i.product_id IN (${productIds.map(() => "?").join(", ")}) AND (d.order_number IS NULL OR (d.delivered_at IS NULL AND d.skipped = 0 AND d.attempts < ?))
          ORDER BY o.fulfilled_at LIMIT 50`,
-        [MAX_DELIVERY_ATTEMPTS],
+        [...productIds, MAX_DELIVERY_ATTEMPTS],
       )
     ).map(toRow);
   }

@@ -511,7 +511,7 @@ export async function createApp(config: MerchantConfig, deps: { mailer?: Mailer;
       results.push({ orderNumber: after.orderNumber, state: after.state });
     }
     // Enrolments that failed earlier (the course platform was unreachable, say).
-    if (shop.digital && enroller) for (const order of await store.ordersAwaitingDelivery()) await deliver(order.orderNumber);
+    if (shop.digital && enroller) for (const order of await store.ordersAwaitingDelivery(shop.products.filter((p) => p.courseId).map((p) => p.id))) await deliver(order.orderNumber);
     return results;
   }
 
