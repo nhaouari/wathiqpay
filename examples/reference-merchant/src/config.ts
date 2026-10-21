@@ -65,7 +65,8 @@ export function configFromEnv(env: NodeJS.ProcessEnv = process.env): MerchantCon
   if (env["VERCEL"] && dbUrl.startsWith("file:")) {
     throw new Error("MERCHANT_DB_URL must point to a hosted libSQL database (libsql://…) on Vercel; the filesystem there is read-only and not persistent. See examples/reference-merchant/deploy/vercel.md.");
   }
-  const store = env["MERCHANT_STORE"] === "courses" ? "courses" : "demo";
+  // Tolerate the usual dashboard slips: surrounding quotes, spaces, capitals.
+  const store = (env["MERCHANT_STORE"] ?? "").trim().replace(/^["']|["']$/g, "").toLowerCase() === "courses" ? "courses" : "demo";
   const ochToken = env["OCH_INTEGRATION_TOKEN"] || undefined;
   if (store === "courses" && mode === "production" && !ochToken) throw new Error("OCH_INTEGRATION_TOKEN is required to sell courses in production");
   const adminToken = env["MERCHANT_ADMIN_TOKEN"] || undefined;
