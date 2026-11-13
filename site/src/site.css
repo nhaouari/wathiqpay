@@ -67,8 +67,8 @@ nav a:hover { color: var(--green); text-decoration: underline; }
 main > section { padding-block: clamp(3.5rem, 8vw, 6rem); }
 .hero { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: clamp(2rem, 5vw, 4rem); align-items: start; }
 .hero-text { display: grid; gap: 1.4rem; }
-.status-chip { display: inline-flex; align-items: center; gap: 0.55rem; width: fit-content; background: var(--amber-soft); color: var(--amber); font-size: 0.88rem; font-weight: 500; padding: 0.3rem 0.8rem; border-radius: 999px; }
-.dot { width: 0.55rem; height: 0.55rem; border-radius: 50%; background: var(--amber); }
+.status-chip { display: inline-flex; align-items: center; gap: 0.55rem; width: fit-content; background: var(--green-soft); color: var(--green); font-size: 0.88rem; font-weight: 500; padding: 0.3rem 0.8rem; border-radius: 999px; }
+.dot { width: 0.55rem; height: 0.55rem; border-radius: 50%; background: var(--green); }
 .lede { font-size: 1.15rem; color: var(--ink-2); max-width: 36rem; }
 .ar { font-family: var(--arabic); font-size: 1.1rem; color: var(--ink-2); text-align: right; }
 .actions { display: flex; gap: 0.8rem; flex-wrap: wrap; }

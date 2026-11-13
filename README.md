@@ -4,7 +4,7 @@ Proprietary project. WathiqPay is not distributed as open-source software. Third
 
 WathiqPay is a server-side TypeScript/Node.js client for the SATIM e-commerce payment gateway (SATIM EPG/IPAY): order registration, hosted-page redirection, server-to-server acknowledgement, and refunds.
 
-Status: `0.1.0-alpha.0`, private, unpublished. The SDK and the reference merchant are complete and tested offline, and registration, acknowledgement, 15 card scenarios, and refunds have been run against SATIM's certification gateway (see [docs/live-evidence.md](docs/live-evidence.md)).
+Status: certified by GIE Monétique as a payment module (certificate NC/11/002626/2026), listed on CIBWeb among the certified payment modules. Package version `0.1.0-alpha.0`, private, unpublished. Registration, acknowledgement, 15 card scenarios, and refunds have been run against SATIM's certification gateway (see [docs/live-evidence.md](docs/live-evidence.md)).
 
 ## Requirements
 
@@ -105,4 +105,4 @@ Copy `.env.example` to `.env` for live tests. Never commit credentials or SATIM 
 
 ## Scope and legal position
 
-WathiqPay is integration software. Each merchant keeps its own CIBWeb authorization, acquiring-bank relationship, credentials, terminal, and settlement account. Collection on behalf of merchants, pooled balances, payouts, and wallet services are out of scope. Module certification, when obtained, covers the exact tested release only.
+WathiqPay is integration software. Each merchant keeps its own CIBWeb authorization, acquiring-bank relationship, credentials, terminal, and settlement account. Collection on behalf of merchants, pooled balances, payouts, and wallet services are out of scope. Module certification (NC/11/002626/2026) covers the tested release; it does not replace each merchant's own CIBWeb application.
